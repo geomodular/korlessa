@@ -153,7 +153,6 @@ int main(int argc, char **argv) {
     }
 
 SUCCESS_3:
-    // free_event_list(list);
     list_apply(list, free);
 SUCCESS_2:
     free_parse_result(&res);
@@ -161,7 +160,6 @@ SUCCESS_2:
     return EXIT_SUCCESS;
 
 FAIL_3:
-    //free_event_list(list);
     list_apply(list, free);
 FAIL_2:
     free_parse_result(&res);
