@@ -98,7 +98,8 @@ struct context {
     double divider;
     unsigned char velocity; 
     int  last_octave;
-    struct event_list *last_note_entry; // just one entry is relevant (not list)
+    struct event_list *last_note;
+    struct event_list *last_interval;
     bool referencing; // true if translator is referencing a sheet
 };
 
@@ -112,7 +113,7 @@ struct context init_context() {
         .divider = 1,
         .velocity = 127,
         .last_octave = 5,
-        .last_note_entry = NULL,
+        .last_note = NULL,
         .referencing = false,
     };
 }
@@ -156,17 +157,17 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
         snd_seq_event_t e = translate_note(ctx, note);
         struct event_list *entry = new_event_list(e);
         ctx->last_octave = note->octave;
-        ctx->last_note_entry = entry;
+        ctx->last_note = entry;
         ctx->offset += compute_duration(ctx->divider);
         return entry;
     }
 
     case NODE_TYPE_INTERVAL:
     {
-        if (ctx->last_note_entry != NULL) {
-            snd_seq_event_t e = translate_interval(ctx, ctx->last_note_entry->e, n->u.interval->value);
+        if (ctx->last_note != NULL) {
+            snd_seq_event_t e = translate_interval(ctx, ctx->last_note->e, n->u.interval->value);
             struct event_list *entry = new_event_list(e);
-            ctx->last_note_entry = entry;
+            ctx->last_interval = entry;
             ctx->offset += compute_duration(ctx->divider);
             return entry;
         }
@@ -175,16 +176,21 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
     }
 
     case NODE_TYPE_REST:
-        ctx->last_note_entry = NULL;
+        ctx->last_note = NULL;
+        ctx->last_interval = NULL;
         ctx->offset += compute_duration(ctx->divider);
         break;
 
     case NODE_TYPE_TIE:
     {
         unsigned int d = compute_duration(ctx->divider); 
-        if (ctx->last_note_entry != NULL)
-            ctx->last_note_entry->e.data.note.duration += d;
-        ctx->offset += d;
+        if (ctx->last_interval != NULL) {
+            ctx->last_interval->e.data.note.duration += d;
+            ctx->offset += d;
+        } else if (ctx->last_note != NULL) {
+            ctx->last_note->e.data.note.duration += d;
+            ctx->offset += d;
+        }
         break;
     }
 
