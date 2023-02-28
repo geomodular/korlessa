@@ -11,8 +11,7 @@
 #define DEFAULT_QUEUE_SIZE 64
 #define DEFAULT_BPM 120 // TODO: make as an argument
 #define DEFAULT_PULSE_PER_QUARTER 96 // TODO: I have two such defaults
-#define DEFAULT_DRAIN_SIZE 32
-#define DEFAULT_DRAIN_CYCLE_SIZE 16
+#define DEFAULT_DRAIN_SIZE 48
 #define DEFAULT_POLL_TIMEOUT 1000 // ms
 
 static volatile sig_atomic_t running = 1;
@@ -64,14 +63,24 @@ int set_tempo(snd_seq_t *client, int queue_id, int bpm) {
 }
 
 // TODO: come up with a better name
-int drain_output(struct event_list *list, snd_seq_t *client, int *index, int n) {
+int drain_output(struct event_list *list, snd_seq_t *client, int *index, int n, snd_seq_event_t usr1) {
 
     struct event_list *entry = list_goto(list, *index);
     int i = *index;
     for (int k = 0; entry != NULL; entry = entry->l.next, i++, k++) {
-        if (k == n)
+        if (k == n-1) // Count with usr1
             break;
         int err = snd_seq_event_output(client, &entry->e);
+        if (err < 0) {
+            fprintf(stderr, "failed outputing event: %s\n", snd_strerror(err)); 
+            return EXIT_FAILURE;
+        }
+    }
+
+    // Schedule periodic drain as usr1
+    if (entry != NULL) {
+        usr1.time.tick = entry->e.time.tick;
+        int err = snd_seq_event_output(client, &usr1);
         if (err < 0) {
             fprintf(stderr, "failed outputing event: %s\n", snd_strerror(err)); 
             return EXIT_FAILURE;
@@ -88,7 +97,7 @@ int drain_output(struct event_list *list, snd_seq_t *client, int *index, int n) 
     return EXIT_SUCCESS;
 }
 
-int loop(struct event_list *list, snd_seq_t *client, int *index) {
+int loop(struct event_list *list, snd_seq_t *client, int *index, snd_seq_event_t usr1) {
     int nfds = snd_seq_poll_descriptors_count(client, POLLIN);
     struct pollfd *pfds = calloc(nfds, sizeof(struct pollfd)); 
 
@@ -125,7 +134,7 @@ int loop(struct event_list *list, snd_seq_t *client, int *index) {
 
                 case SND_SEQ_EVENT_USR1: // drain another output
                     printf("got usr1; draining output\n");
-                    if (drain_output(list, client, index, DEFAULT_DRAIN_CYCLE_SIZE) == EXIT_FAILURE)
+                    if (drain_output(list, client, index, DEFAULT_DRAIN_SIZE, usr1) == EXIT_FAILURE)
                         goto FAIL_1;
                     break;
 
@@ -147,7 +156,7 @@ FAIL_1:
     return EXIT_FAILURE;
 }
  
-int run(struct event_list *list, snd_seq_t *client, int queue_id) {
+int run(struct event_list *list, snd_seq_t *client, int queue_id, snd_seq_event_t usr1) {
 
     int err = set_tempo(client, queue_id, DEFAULT_BPM);
     if (err == EXIT_FAILURE)
@@ -161,12 +170,12 @@ int run(struct event_list *list, snd_seq_t *client, int queue_id) {
 
     int index = 0;
 
-    err = drain_output(list, client, &index, DEFAULT_DRAIN_SIZE);
+    err = drain_output(list, client, &index, DEFAULT_DRAIN_SIZE, usr1);
     if (err == EXIT_FAILURE)
         goto FAIL_1;
 
     signal(SIGINT, sig_handler); // catch ctrl+c
-    err = loop(list, client, &index);
+    err = loop(list, client, &index, usr1);
     if (err == EXIT_FAILURE)
         goto FAIL_1;
 
@@ -182,8 +191,8 @@ FAIL_1:
     return EXIT_FAILURE;
 }
 
-// prepare fills up remaining info for events and adds breakpoints
-int prepare(struct event_list *list, int client_id, int port_out, int port_in, int queue_id) {
+// prepare_list fills up remaining info for events and adds breakpoints
+int prepare_list(struct event_list *list, int client_id, int port_out, int port_in, int queue_id) {
 
     int i = 0;
     for (struct event_list *entry = list; entry != NULL; entry = entry->l.next, i++) {
@@ -209,21 +218,17 @@ int prepare(struct event_list *list, int client_id, int port_out, int port_in, i
             fprintf(stderr, "unhandled midi event: %u\n", e->type);
             break;
         }
-
-        // TODO: rewrite
-        if (((i+1)%(DEFAULT_DRAIN_CYCLE_SIZE-1)) == 0 && i != 0) {
-            struct event_list *ev = calloc(1, sizeof(struct event_list));
-            if (ev == NULL) return EXIT_FAILURE;
-            snd_seq_ev_clear(&ev->e);
-            ev->e.type = SND_SEQ_EVENT_USR1;
-            snd_seq_ev_set_dest(&ev->e, client_id, port_in);
-            snd_seq_ev_schedule_tick(&ev->e, queue_id, 0, e->time.tick);
-            ev->l.next = entry->l.next;
-            entry->l.next = ev;
-            entry = ev; // to move forward in list
-        }
     }
     return EXIT_SUCCESS;
+}
+
+snd_seq_event_t prepare_usr1(int client_id, int port_in, int queue_id) {
+    snd_seq_event_t usr1;
+    snd_seq_ev_clear(&usr1);
+    usr1.type = SND_SEQ_EVENT_USR1;
+    snd_seq_ev_set_dest(&usr1, client_id, port_in);
+    snd_seq_ev_schedule_tick(&usr1, queue_id, 0, 0);
+    return usr1;
 }
 
 int schedule_and_loop(struct event_list *list, int target_client, int target_port) {
@@ -278,11 +283,13 @@ int schedule_and_loop(struct event_list *list, int target_client, int target_por
         goto FAIL_5;
     }
 
-    int ret = prepare(list, client_id, port_out, port_in, queue_id);
+    int ret = prepare_list(list, client_id, port_out, port_in, queue_id);
     if (ret == EXIT_FAILURE)
         goto FAIL_5;
 
-    ret = run(list, client, queue_id);
+    snd_seq_event_t usr1 = prepare_usr1(client_id, port_in, queue_id);
+
+    ret = run(list, client, queue_id, usr1);
     if (ret == EXIT_FAILURE)
         goto FAIL_5;
 
