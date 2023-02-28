@@ -14,6 +14,12 @@
 #define DEFAULT_DRAIN_SIZE 48
 #define DEFAULT_POLL_TIMEOUT 1000 // ms
 
+enum {
+    DRAIN_TYPE_INDEX = 0,
+    DRAIN_TYPE_EVENTS = 0,
+    DRAIN_TYPE_LOOP = 1,
+};
+
 static volatile sig_atomic_t running = 1;
 
 static void sig_handler(int s)
@@ -62,11 +68,11 @@ int set_tempo(snd_seq_t *client, int queue_id, int bpm) {
     return EXIT_SUCCESS;
 }
 
-// TODO: come up with a better name
-int drain_output(struct event_list *list, snd_seq_t *client, int *index, int n, snd_seq_event_t usr1) {
+int drain_events(struct event_list *list, snd_seq_t *client, int *index, int n, snd_seq_event_t usr1) {
 
     struct event_list *entry = list_goto(list, *index);
     int i = *index;
+    bool loop = false;
     for (int k = 0; entry != NULL; entry = entry->l.next, i++, k++) {
         if (k == n-1) // Count with usr1
             break;
@@ -75,10 +81,17 @@ int drain_output(struct event_list *list, snd_seq_t *client, int *index, int n, 
             fprintf(stderr, "failed outputing event: %s\n", snd_strerror(err)); 
             return EXIT_FAILURE;
         }
+        if (entry->end_loop) {
+            loop = true;
+            break;
+        }
     }
 
     // Schedule periodic drain as usr1
     if (entry != NULL) {
+        // Use external data to store the entry pointer?
+        if (loop)
+            usr1.data.raw8.d[DRAIN_TYPE_INDEX] = DRAIN_TYPE_LOOP;
         usr1.time.tick = entry->e.time.tick;
         int err = snd_seq_event_output(client, &usr1);
         if (err < 0) {
@@ -95,6 +108,34 @@ int drain_output(struct event_list *list, snd_seq_t *client, int *index, int n, 
        return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
+}
+
+void alter_list_for_loop(struct event_list *list, int *index) {
+    struct event_list *start, *end;
+    struct event_list *l = list;
+    int i = 0;
+    while (l != NULL) {
+        if (l->start_loop) {
+            *index = i;
+            start = l;
+        }
+        if (l->end_loop) {
+            end = l;
+            break;
+        }
+        l = l->l.next;
+        i++;
+    };
+
+    if (start == NULL || end == NULL)
+        return; // Unreachable
+
+    l = start;
+    while (l != NULL) {
+        l->e.time.tick += end->loop_offset;
+        if (l->end_loop) break;
+        l = l->l.next;
+    }
 }
 
 int loop(struct event_list *list, snd_seq_t *client, int *index, snd_seq_event_t usr1) {
@@ -133,9 +174,16 @@ int loop(struct event_list *list, snd_seq_t *client, int *index, snd_seq_event_t
                     break;
 
                 case SND_SEQ_EVENT_USR1: // drain another output
-                    printf("got usr1; draining output\n");
-                    if (drain_output(list, client, index, DEFAULT_DRAIN_SIZE, usr1) == EXIT_FAILURE)
-                        goto FAIL_1;
+                    if (e->data.raw32.d[DRAIN_TYPE_INDEX] == DRAIN_TYPE_LOOP) {
+                        printf("got usr1 loop event\n");
+                        alter_list_for_loop(list, index);
+                        if (drain_events(list, client, index, DEFAULT_DRAIN_SIZE, usr1) == EXIT_FAILURE)
+                            goto FAIL_1;
+                    } else if (e->data.raw32.d[DRAIN_TYPE_INDEX] == DRAIN_TYPE_EVENTS) {
+                        printf("got usr1 draining event\n");
+                        if (drain_events(list, client, index, DEFAULT_DRAIN_SIZE, usr1) == EXIT_FAILURE)
+                            goto FAIL_1;
+                    }
                     break;
 
                 case SND_SEQ_EVENT_TEMPO: // change tempo
@@ -170,7 +218,7 @@ int run(struct event_list *list, snd_seq_t *client, int queue_id, snd_seq_event_
 
     int index = 0;
 
-    err = drain_output(list, client, &index, DEFAULT_DRAIN_SIZE, usr1);
+    err = drain_events(list, client, &index, DEFAULT_DRAIN_SIZE, usr1);
     if (err == EXIT_FAILURE)
         goto FAIL_1;
 
@@ -226,6 +274,7 @@ snd_seq_event_t prepare_usr1(int client_id, int port_in, int queue_id) {
     snd_seq_event_t usr1;
     snd_seq_ev_clear(&usr1);
     usr1.type = SND_SEQ_EVENT_USR1;
+    usr1.data.raw8.d[DRAIN_TYPE_INDEX] = DRAIN_TYPE_EVENTS;
     snd_seq_ev_set_dest(&usr1, client_id, port_in);
     snd_seq_ev_schedule_tick(&usr1, queue_id, 0, 0);
     return usr1;

@@ -11,6 +11,7 @@ mpc_val_t *sheet_fold(int n, mpc_val_t **xs);
 mpc_val_t *node_fold(int n, mpc_val_t **xs);
 mpc_val_t *reference_fold(int n, mpc_val_t **xs);
 mpc_val_t *duration_fold(int n, mpc_val_t **xs);
+mpc_val_t *repeater_fold(int n, mpc_val_t **xs);
 mpc_val_t *ctor_int_default();
 mpc_val_t *ctor_one();
 mpc_val_t *apply_rest(mpc_val_t *x);
@@ -19,6 +20,7 @@ mpc_val_t *apply_divider(mpc_val_t *x);
 mpc_val_t *apply_rewind(mpc_val_t *x);
 mpc_val_t *apply_eof(mpc_val_t *x);
 mpc_val_t *apply_as_duration(mpc_val_t *x);
+mpc_val_t *apply_loop(mpc_val_t *x);
 void free_node(mpc_val_t *x);
 
 struct parser new_parser() {
@@ -98,10 +100,12 @@ struct parser new_parser() {
     );
 
     // Repeater (part of reference and sheet): {}x2
-    mpc_define(repeater, mpc_maybe_lift(mpc_and(2, mpcf_snd_free,
-        mpc_char('x'),
-        mpc_digits(),
-        free), ctor_one));
+    mpc_define(repeater, mpc_maybe_lift(mpc_or(2,
+        mpc_and(2, repeater_fold,
+            mpc_char('x'),
+            mpc_digits(),
+            free),
+        mpc_apply(mpc_string("loop"), apply_loop)), ctor_one));
 
     // Sheet: label:4to3{...}
     mpc_define(sheet, mpc_and(
@@ -214,12 +218,14 @@ mpc_val_t *sheet_fold(int n, mpc_val_t **xs) {
     struct node *node = calloc(1, sizeof(struct node));
     struct sheet *sheet = calloc(1, sizeof(struct sheet));
     struct node *crate = xs[2];
+
+    int *count = xs[3];
     char *ptr = NULL;
 
     sheet->label = xs[0];
     sheet->units = strtol(xs[1], &ptr, 10);
     sheet->duration = strtol(&ptr[1], NULL, 10);
-    sheet->repeat_count = atoi(xs[3]);
+    sheet->repeat_count = *count;
     sheet->n = crate->n;
     sheet->nodes = crate->nodes;
 
@@ -263,8 +269,10 @@ mpc_val_t *reference_fold(int n, mpc_val_t **xs) {
     struct node *node = calloc(1, sizeof(struct node));
     struct reference *reference = calloc(1, sizeof(struct reference));
 
+    int *count = xs[1];
+
     reference->label = xs[0];
-    reference->repeat_count = atoi(xs[1]);
+    reference->repeat_count = *count;
 
     node->type = NODE_TYPE_REFERENCE;
     node->u.reference = reference;
@@ -290,6 +298,18 @@ mpc_val_t *duration_fold(int n, mpc_val_t **xs) {
     return ret;
 }
 
+
+mpc_val_t *repeater_fold(int n, mpc_val_t **xs) {
+
+    int *ret = calloc(1, sizeof (int));
+    *ret = atoi(xs[1]);
+
+    free(xs[0]); // 'x'/char
+    free(xs[1]); // count/int
+    
+    return ret;
+}
+
 mpc_val_t *ctor_int_default() {
     int *x = calloc(1, sizeof(int));
     *x = -1;
@@ -297,8 +317,8 @@ mpc_val_t *ctor_int_default() {
 }
 
 mpc_val_t *ctor_one() {
-    char *x = calloc(2, sizeof(char));
-    strcat(x, "1");
+    int *x = calloc(1, sizeof(int));
+    *x = 1;
     return x;
 }
 
@@ -349,6 +369,13 @@ mpc_val_t *apply_as_duration(mpc_val_t *x) {
     char *str = x;
     char *ret = calloc(strlen(str) + 3, sizeof (char));
     sprintf(ret, "1:%s", str);
+    free(x);
+    return ret;
+}
+
+mpc_val_t *apply_loop(mpc_val_t *x) {
+    int *ret = calloc(1, sizeof (int));
+    *ret = -1;
     free(x);
     return ret;
 }

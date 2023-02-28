@@ -17,6 +17,14 @@ void *list_goto(void *list, int index) {
     return l;
 }
 
+
+void *list_goto_last(void *list) {
+    struct list *l = list;
+    if (l == NULL) return NULL;
+    for (; l->next != NULL; l = l->next);
+    return l;
+}
+
 void list_insert_after(void *list, int index, void *new_entry) {
     struct list *l = list_goto(list, index);
     if (l == NULL) return;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <alsa/asoundlib.h>
 
 #include "list.h"
@@ -8,10 +9,10 @@
 struct event_list {
     struct list l;
     snd_seq_event_t e;
-    // struct event_list *next;
+    bool start_loop;
+    bool end_loop;
+    unsigned int loop_offset;
 };
-
-// void free_event_list(struct event_list *list);
 
 struct event_list *translate(struct node n);
 

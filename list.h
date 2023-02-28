@@ -8,6 +8,7 @@ struct list {
 
 void *list_append(void *list, void *new_entry);
 void *list_goto(void *list, int index);
+void *list_goto_last(void *list);
 void list_insert_after(void *list, int index, void *new_entry);
 void *list_find(void *list, bool (*f)(void *, void *), void *arg);
 

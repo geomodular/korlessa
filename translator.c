@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdbool.h>
 #include <alsa/asoundlib.h>
 
 #include "list.h"
@@ -122,6 +123,7 @@ snd_seq_event_t translate_note(struct context *ctx, struct note *n);
 snd_seq_event_t translate_interval(struct context *ctx, snd_seq_event_t event, int interval);
 snd_seq_event_t translate_eof(struct context *ctx);
 snd_seq_event_t translate_tempo(struct context *ctx, unsigned int tempo);
+void print_event(struct event_list *l);
 
 // Duration of the note in ticks
 unsigned int compute_duration(double divider) {
@@ -150,10 +152,13 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
     case NODE_TYPE_NOTE:
     {
         struct note *note = n->u.note;
+
         if (note->octave == -1)
             note->octave = ctx->last_octave;
+
         if (note->channel == -1)
             note->channel = ctx->channel;
+
         snd_seq_event_t e = translate_note(ctx, note);
         struct event_list *entry = new_event_list(e);
         ctx->last_octave = note->octave;
@@ -200,26 +205,50 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
 
     case NODE_TYPE_SHEET:
     {
+        // Namespace and reference handling
         if (isNotEmpty(n->u.sheet->label) && !ctx->referencing) {
             ctx->namespace = list_append(ctx->namespace, new_namespace(n->u.sheet->label));
             char *label = get_label(ctx->namespace);
-            printf("got: %s\n", label);
             struct sheet_reference *r = new_sheet_reference(n->u.sheet, label, ctx->divider); 
             ctx->sheets = list_append(ctx->sheets, r);
         }
+
+
+        // Loop preparations
+        bool loop = false;
+        int count = n->u.sheet->repeat_count;
+        if (count < 0) {
+            count = 1;
+            loop = true;
+        }
+
+        unsigned int old_offset = ctx->offset;
         double d = ctx->divider;
+
         struct event_list *list = NULL;
-        for (size_t i = 0; i < n->u.sheet->repeat_count; i++) {
+        for (size_t i = 0; i < count; i++) {
             for (size_t j = 0; j < n->u.sheet->n; j++) {
                 double duration = n->u.sheet->duration;
                 int units = n->u.sheet->units;
                 ctx->divider = d * (duration / (double) units);
                 struct event_list *part = _translate(ctx, n->u.sheet->nodes[j]);
+
+                if (loop && j == 0)
+                    part->start_loop = true;
+
+                if (loop && j == (n->u.sheet->n-1)) {
+                    struct event_list *last = list_goto_last(part);
+                    last->end_loop = true;
+                    last->loop_offset = ctx->offset - old_offset;
+                }
+
                 list = list_append(list, part);
             }
         }
+
         if (isNotEmpty(n->u.sheet->label) && !ctx->referencing)
             ctx->namespace = list_drop_apply(ctx->namespace, free);
+
         ctx->divider = d;
         return list;
     }
@@ -228,18 +257,40 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
     {
         struct sheet_reference *r = list_find(ctx->sheets, find_label_in_sheet_reference, n->u.reference->label);
         if (r != NULL) {
+
+            // Loop preparations
+            bool loop = false;
+            int count = n->u.reference->repeat_count;
+            if (count < 0) {
+                count = 1;
+                loop = true;
+            }
+
+            unsigned int old_offset = ctx->offset;
             ctx->referencing = true;
             double d = ctx->divider;
+
             struct event_list *list = NULL;
-            for (size_t i = 0; i < n->u.reference->repeat_count; i++) {
+            for (size_t i = 0; i < count; i++) {
                 for (size_t j = 0; j < r->s->n; j++) {
                     ctx->divider = r->divider * (r->s->duration / (double) r->s->units); // reset value on each iteration
                     struct event_list *part = _translate(ctx, r->s->nodes[j]);
+
+                    if (loop && j == 0)
+                        part->start_loop = true;
+
+                    if (loop && j == (r->s->n-1)) {
+                        struct event_list *last = list_goto_last(part);
+                        last->end_loop = true;
+                        last->loop_offset = ctx->offset - old_offset;
+                    }
+                    
                     list = list_append(list, part);
                 }
             }
-            ctx->referencing = false;
+
             ctx->divider = d;
+            ctx->referencing = false;
             return list;
         }
         break;
@@ -363,11 +414,7 @@ snd_seq_event_t translate_tempo(struct context *ctx, unsigned int tempo) {
     return e;
 }
 
-void print_events(struct event_list *l) {
-    if (l == NULL) {
-        printf("\n");
-        return;
-    }
+void print_event(struct event_list *l) {
 
     snd_seq_event_t e = l->e;
 
@@ -375,7 +422,13 @@ void print_events(struct event_list *l) {
         case SND_SEQ_EVENT_NOTE:
         {
             snd_seq_ev_note_t n = e.data.note;
-            printf("(NOTE t:%u ch:%u d:%u n:%u v:%u) ", e.time.tick, n.channel, n.duration, n.note, n.velocity);
+            char *loop = "";
+            if (l->start_loop) {
+                loop = "L-START ";
+            } else if (l->end_loop) {
+                loop = "L-END ";
+            }
+            printf("(NOTE %st:%u ch:%u d:%u n:%u v:%u) ", loop, e.time.tick, n.channel, n.duration, n.note, n.velocity);
             break;
         }
 
@@ -387,6 +440,13 @@ void print_events(struct event_list *l) {
             printf("(USR0 t:%u) ", e.time.tick);
             break;
     }
+}
 
+void print_events(struct event_list *l) {
+    if (l == NULL) {
+        printf("\n");
+        return;
+    }
+    print_event(l);
     print_events(l->l.next);
 }
