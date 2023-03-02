@@ -72,3 +72,38 @@ void *list_drop_apply(void *list, void (*f)(void *)) {
     return NULL;
 }
 
+
+struct list *swap(struct list *l1, struct list *l2) {
+    void *tmp = l2->next;
+    l2->next = l1;
+    l1->next = tmp;
+    return l2;
+}
+
+void *list_sort(void *list, bool (*f)(void *, void *)) {
+
+    int size = list_size(list);
+    struct list anchor = {.next = list};
+
+    for (size_t i = 0; i < size; i++) {
+
+        struct list *head = &anchor;
+        bool swapped = false;
+
+        for (size_t j = 0; j < size-i-1; j++) {
+
+            struct list *actual = head->next;
+            struct list *next = actual->next;
+
+            if (f(actual, next)) {
+                head->next = swap(actual, next);
+                head = next;
+                swapped = true;
+            } else {
+                head = actual;
+            }
+        }
+        if (!swapped) break;
+    }
+    return anchor.next;
+}
