@@ -37,6 +37,7 @@ void list_apply(void *list, void (*f)(void *));
 // head of the`list`, or NULL if nothing left.
 void *list_drop_apply(void *list, void (*f)(void *));
 
-// list_sort performs stupid bubble sort on top of `list`.
+// list_sort performs stupid bubble sort on top of `list`. The `f` should
+// return true or false based on comparing condition.
 void *list_sort(void *list, bool (*f)(void *, void *));
 
