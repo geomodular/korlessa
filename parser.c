@@ -112,19 +112,20 @@ struct parser new_parser() {
         4, sheet_fold,
         mpc_maybe_lift(label, mpcf_ctor_str),
         duration,
-        mpc_tok_brackets(mpc_many(node_fold, mpc_or(7,
+        mpc_tok_brackets(mpc_many(node_fold, mpc_or(8,
             mpc_tok(rest),
             mpc_tok(interval),
             mpc_tok(tie),
             mpc_tok(divider),
             mpc_tok(comment),
+            mpc_tok(rewind),
             mpc_tok(sheet),
             mpc_tok(note)
             )), free_node),
         repeater,
         free, free, free_node));
 
-    // Group: label:{...}
+    // TODO: Group: label:{...}
 
     // Top level statements
     mpc_parser_t *crate = mpc_total(mpc_many(node_fold, mpc_or(
