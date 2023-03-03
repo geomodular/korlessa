@@ -90,31 +90,48 @@ char *get_label(struct namespace *ns) {
     return full_label;
 }
 
+struct offset_stack {
+    struct list l;
+    unsigned int offset;
+};
+
+struct offset_stack *new_offset_stack(unsigned int offset) {
+    struct offset_stack *ptr = calloc(1, sizeof(struct offset_stack));
+    if (ptr == NULL) return NULL;
+    ptr->offset = offset;
+    return ptr;
+}
+
 struct context {
     unsigned int bpm;
     unsigned int offset;
+    int octave;
     struct sheet_reference *sheets;
     struct namespace *namespace;
+    struct offset_stack *offset_stack;
     unsigned char channel;
     double divider;
     unsigned char velocity; 
-    int  last_octave;
     struct event_list *last_note;
     struct event_list *last_interval;
-    bool referencing; // true if translator is referencing a sheet
+    bool referencing;
 };
 
 struct context init_context() {
+
+    // Default values
     return (struct context) {
         .bpm = 120,
         .offset = 0,
+        .octave = 5,
         .sheets = NULL,
         .namespace = NULL,
+        .offset_stack = NULL,
         .channel = 0,
-        .divider = 1,
+        .divider = 1.,
         .velocity = 127,
-        .last_octave = 5,
         .last_note = NULL,
+        .last_interval = NULL,
         .referencing = false,
     };
 }
@@ -154,15 +171,16 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
         struct note *note = n->u.note;
 
         if (note->octave == -1)
-            note->octave = ctx->last_octave;
+            note->octave = ctx->octave;
 
         if (note->channel == -1)
             note->channel = ctx->channel;
 
         snd_seq_event_t e = translate_note(ctx, note);
         struct event_list *entry = new_event_list(e);
-        ctx->last_octave = note->octave;
+        ctx->octave = note->octave;
         ctx->last_note = entry;
+        ctx->last_interval = NULL;
         ctx->offset += compute_duration(ctx->divider);
         return entry;
     }
@@ -199,6 +217,19 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
         break;
     }
 
+    case NODE_TYPE_REWIND:
+    {
+        struct offset_stack *last_offset = list_goto_last(ctx->offset_stack);
+        if (last_offset != NULL) {
+            ctx->offset = last_offset->offset; 
+        } else {
+            ctx->offset = 0;
+        }
+        ctx->last_note = NULL;
+        ctx->last_interval = NULL;
+        break;
+    }
+
     case NODE_TYPE_DIVIDER:
         // No action for divider
         break;
@@ -213,10 +244,10 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
             ctx->sheets = list_append(ctx->sheets, r);
         }
 
-
         // Loop preparations
         bool loop = false;
         int count = n->u.sheet->repeat_count;
+        // Loop is indicated by negative number of repeat_count
         if (count < 0) {
             count = 1;
             loop = true;
@@ -227,23 +258,28 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
 
         struct event_list *list = NULL;
         for (size_t i = 0; i < count; i++) {
+            ctx->offset_stack = list_append(ctx->offset_stack, new_offset_stack(ctx->offset));
             for (size_t j = 0; j < n->u.sheet->n; j++) {
                 double duration = n->u.sheet->duration;
                 int units = n->u.sheet->units;
                 ctx->divider = d * (duration / (double) units);
                 struct event_list *part = _translate(ctx, n->u.sheet->nodes[j]);
 
+                // Loop flag for this sheet and first element
                 if (loop && j == 0)
                     part->start_loop = true;
 
+                // Loop flag for this sheet and last element
                 if (loop && j == (n->u.sheet->n-1)) {
-                    struct event_list *last = list_goto_last(part);
-                    last->end_loop = true;
-                    last->loop_offset = ctx->offset - old_offset;
+                    if (ctx->last_note != NULL) {
+                        ctx->last_note->end_loop = true;
+                        ctx->last_note->loop_offset = ctx->offset - old_offset;
+                    }
                 }
 
                 list = list_append(list, part);
             }
+            ctx->offset_stack = list_drop_apply(ctx->offset_stack, free);
         }
 
         if (isNotEmpty(n->u.sheet->label) && !ctx->referencing)
@@ -272,21 +308,26 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
 
             struct event_list *list = NULL;
             for (size_t i = 0; i < count; i++) {
+                ctx->offset_stack = list_append(ctx->offset_stack, new_offset_stack(ctx->offset));
                 for (size_t j = 0; j < r->s->n; j++) {
                     ctx->divider = r->divider * (r->s->duration / (double) r->s->units); // reset value on each iteration
                     struct event_list *part = _translate(ctx, r->s->nodes[j]);
 
+                    // Loop flag for this sheet and first element
                     if (loop && j == 0)
                         part->start_loop = true;
 
+                    // Loop flag for this sheet and last element/note
                     if (loop && j == (r->s->n-1)) {
-                        struct event_list *last = list_goto_last(part);
-                        last->end_loop = true;
-                        last->loop_offset = ctx->offset - old_offset;
+                        if (ctx->last_note != NULL) {
+                            ctx->last_note->end_loop = true;
+                            ctx->last_note->loop_offset = ctx->offset - old_offset;
+                        }
                     }
-                    
+
                     list = list_append(list, part);
                 }
+                ctx->offset_stack = list_drop_apply(ctx->offset_stack, free);
             }
 
             ctx->divider = d;
@@ -320,10 +361,18 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
     return NULL;
 }
 
+bool sort_by_tick(void *e1, void *e2) {
+    struct event_list
+        *event1 = e1,
+        *event2 = e2;
+    return event1->e.time.tick > event2->e.time.tick;
+}
+
 struct event_list *translate(struct node n) {
     struct context ctx = init_context();
     struct event_list *events = _translate(&ctx, &n);
-    list_apply(ctx.sheets, free_sheet_reference); 
+    // list_sort(events, sort_by_tick);
+    list_apply(ctx.sheets, free_sheet_reference);
     return events;
 }
 
@@ -379,7 +428,7 @@ snd_seq_event_t translate_note(struct context *ctx, struct note *n) {
     snd_seq_ev_clear(&e);
     snd_seq_ev_set_subs(&e);
     snd_seq_ev_schedule_tick(&e, 0, 0, ctx->offset);
-    snd_seq_ev_set_note(&e, ctx->channel, midi_value(n), ctx->velocity, tick);
+    snd_seq_ev_set_note(&e, n->channel, midi_value(n), ctx->velocity, tick);
     return e;
 }
 
@@ -423,7 +472,9 @@ void print_event(struct event_list *l) {
         {
             snd_seq_ev_note_t n = e.data.note;
             char *loop = "";
-            if (l->start_loop) {
+            if (l->start_loop && l->end_loop) {
+                loop = "L-START-END ";
+            } else if (l->start_loop) {
                 loop = "L-START ";
             } else if (l->end_loop) {
                 loop = "L-END ";
