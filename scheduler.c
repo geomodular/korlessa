@@ -251,6 +251,11 @@ int prepare_list(struct event_list *list, int client_id, int port_out, int port_
             e->queue = queue_id;
             break;
 
+        case SND_SEQ_EVENT_CONTROLLER:
+            snd_seq_ev_set_source(e, port_out);
+            e->queue = queue_id;
+            break;
+
         case SND_SEQ_EVENT_USR0:
             snd_seq_ev_set_dest(e, client_id, port_in); 
             e->queue = queue_id;

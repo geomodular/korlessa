@@ -137,7 +137,8 @@ struct context init_context() {
 }
 
 snd_seq_event_t translate_note(struct context *ctx, struct note *n);
-snd_seq_event_t translate_interval(struct context *ctx, snd_seq_event_t event, int interval);
+snd_seq_event_t translate_interval(struct context *ctx, snd_seq_event_t event, struct interval *i);
+snd_seq_event_t translate_controller(struct context *ctx, struct controller *c);
 snd_seq_event_t translate_eof(struct context *ctx);
 snd_seq_event_t translate_tempo(struct context *ctx, unsigned int tempo);
 void print_event(struct event_list *l);
@@ -188,7 +189,7 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
     case NODE_TYPE_INTERVAL:
     {
         if (ctx->last_note != NULL) {
-            snd_seq_event_t e = translate_interval(ctx, ctx->last_note->e, n->u.interval->value);
+            snd_seq_event_t e = translate_interval(ctx, ctx->last_note->e, n->u.interval);
             struct event_list *entry = new_event_list(e);
             ctx->last_interval = entry;
             ctx->offset += compute_duration(ctx->divider);
@@ -228,6 +229,13 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
         ctx->last_note = NULL;
         ctx->last_interval = NULL;
         break;
+    }
+
+    case NODE_TYPE_CONTROLLER:
+    {
+        snd_seq_event_t e = translate_controller(ctx, n->u.controller);
+        struct event_list *entry = new_event_list(e);
+        return entry;
     }
 
     case NODE_TYPE_DIVIDER:
@@ -432,17 +440,30 @@ snd_seq_event_t translate_note(struct context *ctx, struct note *n) {
     return e;
 }
 
-snd_seq_event_t translate_interval(struct context *ctx, snd_seq_event_t event, int interval) {
+snd_seq_event_t translate_interval(struct context *ctx, snd_seq_event_t event, struct interval *i) {
 
     unsigned int tick = compute_duration(ctx->divider);
     tick -= 4; // without this the note would sound like legato
     
     snd_seq_event_t e = event;
     snd_seq_ev_schedule_tick(&e, 0, 0, ctx->offset);
-    if (e.data.note.note + interval >= 0) {
-        e.data.note.note += interval;
+    if (e.data.note.note + i->value >= 0) {
+        e.data.note.note += i->value;
     }
     e.data.note.duration = tick;
+    return e;
+}
+
+snd_seq_event_t translate_controller(struct context *ctx, struct controller *c) {
+
+    snd_seq_event_t e;
+    snd_seq_ev_clear(&e);
+    snd_seq_ev_set_subs(&e);
+    snd_seq_ev_schedule_tick(&e, 0, 0, ctx->offset);
+    e.type = SND_SEQ_EVENT_CONTROLLER;
+    e.data.control.channel = ctx->channel;
+    e.data.control.param = c->param;
+    e.data.control.value = c->value;
     return e;
 }
 
@@ -482,6 +503,10 @@ void print_event(struct event_list *l) {
             printf("(NOTE %st:%u ch:%u d:%u n:%u v:%u) ", loop, e.time.tick, n.channel, n.duration, n.note, n.velocity);
             break;
         }
+
+        case SND_SEQ_EVENT_CONTROLLER:
+            printf("(CC p:%u v:%d) ", e.data.control.param, e.data.control.value);
+            break;
 
         case SND_SEQ_EVENT_TEMPO:
             printf("(TEMPO t:%u bpm:%d) ", e.time.tick, e.data.queue.param.value);
