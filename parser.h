@@ -37,6 +37,10 @@ struct controller {
     int value;
 };
 
+struct program {
+    int value;
+};
+
 enum node_type {
     NODE_TYPE_UNKNOWN = 0,
     NODE_TYPE_BPM = 1,
@@ -47,10 +51,11 @@ enum node_type {
     NODE_TYPE_DIVIDER = 6,
     NODE_TYPE_REWIND = 7,
     NODE_TYPE_CONTROLLER = 8,
-    NODE_TYPE_SHEET = 9,
-    NODE_TYPE_REFERENCE = 10,
-    NODE_TYPE_CRATE = 11,
-    NODE_TYPE_EOF = 12,
+    NODE_TYPE_PROGRAM = 9,
+    NODE_TYPE_SHEET = 10,
+    NODE_TYPE_REFERENCE = 11,
+    NODE_TYPE_CRATE = 12,
+    NODE_TYPE_EOF = 13,
 };
 
 struct node {
@@ -64,6 +69,7 @@ struct node {
         struct divider *divider;
         struct reference *reference;
         struct controller *controller;
+        struct program *program;
     } u;
 
     // crate
@@ -79,6 +85,7 @@ struct parser {
     mpc_parser_t *divider;
     mpc_parser_t *rewind;
     mpc_parser_t *controller;
+    mpc_parser_t *program;
     mpc_parser_t *repeater;
     mpc_parser_t *comment;
     mpc_parser_t *reference;

@@ -13,6 +13,7 @@ mpc_val_t *reference_fold(int n, mpc_val_t **xs);
 mpc_val_t *duration_fold(int n, mpc_val_t **xs);
 mpc_val_t *repeater_fold(int n, mpc_val_t **xs);
 mpc_val_t *controller_fold(int n, mpc_val_t **xs);
+mpc_val_t *program_fold(int n, mpc_val_t **xs);
 mpc_val_t *ctor_int_default();
 mpc_val_t *ctor_one();
 mpc_val_t *apply_rest(mpc_val_t *x);
@@ -32,6 +33,7 @@ struct parser new_parser() {
     mpc_parser_t* divider = mpc_new("divider");
     mpc_parser_t* rewind = mpc_new("rewind");
     mpc_parser_t* controller = mpc_new("controller");
+    mpc_parser_t* program = mpc_new("program");
     mpc_parser_t* repeater = mpc_new("repeater");
     mpc_parser_t* comment = mpc_new("comment");
     mpc_parser_t* reference = mpc_new("reference");
@@ -70,13 +72,20 @@ struct parser new_parser() {
     // Rewind: rw
     mpc_define(rewind, mpc_apply(mpc_or(2, mpc_string("rw"), mpc_string("rewind")), apply_rewind));
 
-    // Controller: cc9:129
+    // Control change: cc9:129
     mpc_define(controller, mpc_and(4, controller_fold,
         mpc_or(2, mpc_string("cc"), mpc_string("CC")),
         mpc_digits(),
         mpc_char(':'),
         mpc_int(),
         free, free, free
+    ));
+
+    // Program change: pgm12
+    mpc_define(program, mpc_and(2, program_fold,
+        mpc_or(2, mpc_string("pgm"), mpc_string("PGM")),
+        mpc_digits(),
+        free
     ));
 
     // Comment: // comment
@@ -123,7 +132,7 @@ struct parser new_parser() {
         4, sheet_fold,
         mpc_maybe_lift(label, mpcf_ctor_str),
         duration,
-        mpc_tok_brackets(mpc_many(node_fold, mpc_or(9,
+        mpc_tok_brackets(mpc_many(node_fold, mpc_or(10,
             mpc_tok(rest),
             mpc_tok(interval),
             mpc_tok(tie),
@@ -132,6 +141,7 @@ struct parser new_parser() {
             mpc_tok(rewind),
             mpc_tok(sheet),
             mpc_tok(controller),
+            mpc_tok(program),
             mpc_tok(note)
             )), free_node),
         repeater,
@@ -140,12 +150,13 @@ struct parser new_parser() {
     // TODO: Group: label:{...}
 
     // Top level statements
-    mpc_parser_t *crate = mpc_total(mpc_many(node_fold, mpc_or(6,
+    mpc_parser_t *crate = mpc_total(mpc_many(node_fold, mpc_or(7,
         mpc_tok(sheet),
         mpc_tok(reference),
         mpc_tok(bpm),
         mpc_tok(rewind),
         mpc_tok(controller),
+        mpc_tok(program),
         mpc_tok(comment)
         )), free_node);
 
@@ -160,6 +171,7 @@ struct parser new_parser() {
         .divider = divider,
         .rewind = rewind,
         .controller = controller,
+        .program = program,
         .repeater = repeater,
         .comment = comment,
         .reference = reference,
@@ -173,7 +185,7 @@ void free_parser(struct parser *p) {
 
     if (p == NULL) return;
 
-    mpc_cleanup(13, p->note, p->interval, p->rest, p->tie, p->divider, p->controller, p->rewind, p->repeater, p->comment, p->reference, p->label, p->sheet, p->root);
+    mpc_cleanup(14, p->note, p->interval, p->rest, p->tie, p->divider, p->controller, p->program, p->rewind, p->repeater, p->comment, p->reference, p->label, p->sheet, p->root);
     *p = (struct parser) {0};
 }
 
@@ -353,6 +365,22 @@ mpc_val_t *controller_fold(int n, mpc_val_t **xs) {
     return node;
 }
 
+mpc_val_t *program_fold(int n, mpc_val_t **xs) {
+
+    struct node *node = calloc(1, sizeof(struct node));
+    struct program *program = calloc(1, sizeof(struct program));
+
+    program->value = strtoul(xs[1], NULL, 10); // Conversion to unsigned
+
+    node->type = NODE_TYPE_PROGRAM;
+    node->u.program = program;
+
+    free(xs[0]); // 'pgm'/string
+    free(xs[1]); // value/digits
+
+    return node;
+}
+
 mpc_val_t *ctor_int_default() {
     int *x = calloc(1, sizeof(int));
     *x = -1;
@@ -478,6 +506,11 @@ void free_node(mpc_val_t *x) {
         n->u.controller = NULL;
         break;
 
+    case NODE_TYPE_PROGRAM:
+        free(n->u.program);
+        n->u.program = NULL;
+        break;
+
     case NODE_TYPE_CRATE:
         for (size_t i = 0; i < n->n; i++) {
             free_node(n->nodes[i]);
@@ -539,6 +572,10 @@ void print_ast(struct node *n) {
 
     case NODE_TYPE_CONTROLLER:
         printf("(CC p:%u v:%d)", n->u.controller->param, n->u.controller->value);
+        break;
+
+     case NODE_TYPE_PROGRAM:
+        printf("(PGM p:%d)", n->u.program->value);
         break;
 
     case NODE_TYPE_CRATE:

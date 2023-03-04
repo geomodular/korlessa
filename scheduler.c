@@ -246,12 +246,10 @@ int prepare_list(struct event_list *list, int client_id, int port_out, int port_
     for (struct event_list *entry = list; entry != NULL; entry = entry->l.next, i++) {
         snd_seq_event_t *e = &entry->e;
         switch (e->type) {
+            
         case SND_SEQ_EVENT_NOTE:
-            snd_seq_ev_set_source(e, port_out);
-            e->queue = queue_id;
-            break;
-
         case SND_SEQ_EVENT_CONTROLLER:
+        case SND_SEQ_EVENT_PGMCHANGE:
             snd_seq_ev_set_source(e, port_out);
             e->queue = queue_id;
             break;

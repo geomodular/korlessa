@@ -139,6 +139,7 @@ struct context init_context() {
 snd_seq_event_t translate_note(struct context *ctx, struct note *n);
 snd_seq_event_t translate_interval(struct context *ctx, snd_seq_event_t event, struct interval *i);
 snd_seq_event_t translate_controller(struct context *ctx, struct controller *c);
+snd_seq_event_t translate_program(struct context *ctx, struct program *p);
 snd_seq_event_t translate_eof(struct context *ctx);
 snd_seq_event_t translate_tempo(struct context *ctx, unsigned int tempo);
 void print_event(struct event_list *l);
@@ -234,6 +235,13 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
     case NODE_TYPE_CONTROLLER:
     {
         snd_seq_event_t e = translate_controller(ctx, n->u.controller);
+        struct event_list *entry = new_event_list(e);
+        return entry;
+    }
+
+    case NODE_TYPE_PROGRAM:
+    {
+        snd_seq_event_t e = translate_program(ctx, n->u.program);
         struct event_list *entry = new_event_list(e);
         return entry;
     }
@@ -467,6 +475,18 @@ snd_seq_event_t translate_controller(struct context *ctx, struct controller *c) 
     return e;
 }
 
+snd_seq_event_t translate_program(struct context *ctx, struct program *p) {
+
+    snd_seq_event_t e;
+    snd_seq_ev_clear(&e);
+    snd_seq_ev_set_subs(&e);
+    snd_seq_ev_schedule_tick(&e, 0, 0, ctx->offset);
+    e.type = SND_SEQ_EVENT_PGMCHANGE;
+    e.data.control.channel = ctx->channel;
+    e.data.control.value = p->value;
+    return e;
+}
+
 snd_seq_event_t translate_eof(struct context *ctx) {
     snd_seq_event_t e;
     snd_seq_ev_clear(&e);
@@ -506,6 +526,10 @@ void print_event(struct event_list *l) {
 
         case SND_SEQ_EVENT_CONTROLLER:
             printf("(CC p:%u v:%d) ", e.data.control.param, e.data.control.value);
+            break;
+
+        case SND_SEQ_EVENT_PGMCHANGE:
+            printf("(PGM v:%d) ", e.data.control.value);
             break;
 
         case SND_SEQ_EVENT_TEMPO:
