@@ -23,6 +23,7 @@ mpc_val_t *apply_rewind(mpc_val_t *x);
 mpc_val_t *apply_eof(mpc_val_t *x);
 mpc_val_t *apply_as_duration(mpc_val_t *x);
 mpc_val_t *apply_loop(mpc_val_t *x);
+mpc_val_t *apply_legato(mpc_val_t *x);
 void free_node(mpc_val_t *x);
 
 struct parser new_parser() {
@@ -40,6 +41,7 @@ struct parser new_parser() {
     mpc_parser_t* interval = mpc_new("interval");
     mpc_parser_t* label = mpc_new("label");
     mpc_parser_t* sheet = mpc_new("sheet");
+    mpc_parser_t* legato = mpc_new("legato");
     mpc_parser_t* parser = mpc_new("parser");
 
     // Note: ch2:c#4
@@ -47,12 +49,14 @@ struct parser new_parser() {
     mpc_parser_t *letter = mpc_oneof("cdefgabCDEFGAB");
     mpc_parser_t *accidental = mpc_many1(mpcf_strfold, mpc_oneof("#b"));
     mpc_parser_t *octave = mpc_int();
-    mpc_define(note, mpc_and(4, note_fold,
+    mpc_parser_t *velocity = mpc_apply(mpc_and(2, mpcf_snd_free, mpc_char('!'), mpc_digit(), free), mpcf_int);
+    mpc_define(note, mpc_and(5, note_fold,
         mpc_maybe_lift(channel, ctor_int_default),
         letter,
         mpc_maybe_lift(accidental, mpcf_ctor_str),
         mpc_maybe_lift(octave, ctor_int_default),
-        free, free, free));
+        mpc_maybe_lift(velocity, ctor_int_default),
+        free, free, free, free));
 
     // Bpm: 120bpm
     mpc_parser_t *bpm = mpc_and(2, bpm_fold,
@@ -106,6 +110,9 @@ struct parser new_parser() {
     // Intervals: +2 -2
     mpc_define(interval, mpc_and(2, interval_fold, mpc_oneof("-+"), mpc_digits(), free));
 
+    // Legato: (a +1 c)
+    mpc_define(legato, mpc_apply(mpc_tok_parens(mpc_many1(node_fold, mpc_or(3, mpc_tok(note), mpc_tok(interval), mpc_tok(divider))), free_node), apply_legato));
+
     // Label (part of sheet and group): myLabel:
     mpc_define(label, mpc_and(2, mpcf_fst_free,
         mpc_ident(),
@@ -132,13 +139,14 @@ struct parser new_parser() {
         4, sheet_fold,
         mpc_maybe_lift(label, mpcf_ctor_str),
         duration,
-        mpc_tok_brackets(mpc_many(node_fold, mpc_or(10,
+        mpc_tok_brackets(mpc_many(node_fold, mpc_or(11,
             mpc_tok(rest),
             mpc_tok(interval),
             mpc_tok(tie),
             mpc_tok(divider),
             mpc_tok(comment),
             mpc_tok(rewind),
+            mpc_tok(legato),
             mpc_tok(sheet),
             mpc_tok(controller),
             mpc_tok(program),
@@ -146,8 +154,6 @@ struct parser new_parser() {
             )), free_node),
         repeater,
         free, free, free_node));
-
-    // TODO: Group: label:{...}
 
     // Top level statements
     mpc_parser_t *crate = mpc_total(mpc_many(node_fold, mpc_or(7,
@@ -177,6 +183,7 @@ struct parser new_parser() {
         .reference = reference,
         .label = label,
         .sheet = sheet,
+        .legato = legato,
         .root = parser,
     };
 }
@@ -185,7 +192,23 @@ void free_parser(struct parser *p) {
 
     if (p == NULL) return;
 
-    mpc_cleanup(14, p->note, p->interval, p->rest, p->tie, p->divider, p->controller, p->program, p->rewind, p->repeater, p->comment, p->reference, p->label, p->sheet, p->root);
+    mpc_cleanup(15,
+        p->note,
+        p->interval,
+        p->rest,
+        p->tie,
+        p->divider,
+        p->controller,
+        p->program,
+        p->rewind,
+        p->repeater,
+        p->comment,
+        p->reference,
+        p->label,
+        p->sheet,
+        p->legato,
+        p->root);
+
     *p = (struct parser) {0};
 }
 
@@ -214,6 +237,7 @@ mpc_val_t *note_fold(int n, mpc_val_t **xs) {
     note->letter = *(char *) xs[1];
     note->accidental = xs[2];
     note->octave = *(int *) xs[3];
+    note->velocity = *(int *) xs[4];
 
     node->type = NODE_TYPE_NOTE;
     node->u.note = note;
@@ -221,7 +245,8 @@ mpc_val_t *note_fold(int n, mpc_val_t **xs) {
     free(xs[0]); // channel/chars
     free(xs[1]); // letter/char
     // free(xs[2]); // accidental/chars, let's keep this one
-    free(xs[3]); // octave/digit
+    free(xs[3]); // octave/int
+    free(xs[4]); // velocity/int
 
     return node;
 }
@@ -249,17 +274,18 @@ mpc_val_t *interval_fold(int n, mpc_val_t **xs) {
 
 mpc_val_t *sheet_fold(int n, mpc_val_t **xs) {
 
+    // TODO: use create as a base for sheet
+
     struct node *node = calloc(1, sizeof(struct node));
     struct sheet *sheet = calloc(1, sizeof(struct sheet));
     struct node *crate = xs[2];
 
-    int *count = xs[3];
     char *ptr = NULL;
 
     sheet->label = xs[0];
     sheet->units = strtol(xs[1], &ptr, 10);
     sheet->duration = strtol(&ptr[1], NULL, 10);
-    sheet->repeat_count = *count;
+    sheet->repeat_count = *(int *) xs[3];
     sheet->n = crate->n;
     sheet->nodes = crate->nodes;
 
@@ -269,7 +295,7 @@ mpc_val_t *sheet_fold(int n, mpc_val_t **xs) {
     // free(xs[0]); // label/ident
     free(xs[1]); // duration/digits
     free(xs[2]); // crate/node
-    free(xs[3]); // repeater/digits
+    free(xs[3]); // repeater/int
 
     return node;
 }
@@ -451,6 +477,15 @@ mpc_val_t *apply_loop(mpc_val_t *x) {
     return ret;
 }
 
+mpc_val_t *apply_legato(mpc_val_t *x) {
+    struct node *n = x;
+
+    // Let's just keep the node and rename it to legato
+    n->type = NODE_TYPE_LEGATO;
+
+    return n;
+}
+
 void free_node(mpc_val_t *x) {
     if (x == NULL) return;
     
@@ -511,6 +546,7 @@ void free_node(mpc_val_t *x) {
         n->u.program = NULL;
         break;
 
+    case NODE_TYPE_LEGATO:
     case NODE_TYPE_CRATE:
         for (size_t i = 0; i < n->n; i++) {
             free_node(n->nodes[i]);
@@ -534,7 +570,7 @@ void print_ast(struct node *n) {
         break;
 
     case NODE_TYPE_NOTE:
-        printf("(NOTE ch:%d n:%c a:%s o:%d)", n->u.note->channel, n->u.note->letter, n->u.note->accidental, n->u.note->octave);
+        printf("(NOTE ch:%d n:%c a:%s o:%d v:%d)", n->u.note->channel, n->u.note->letter, n->u.note->accidental, n->u.note->octave, n->u.note->velocity);
         break;
 
     case NODE_TYPE_INTERVAL:
@@ -566,6 +602,15 @@ void print_ast(struct node *n) {
         printf(")");
         break;
 
+    case NODE_TYPE_LEGATO:
+        printf("(LEGATO ");
+        for (size_t i = 0; i < n->n; i++) {
+            print_ast(n->nodes[i]);
+            if (i != (n->n - 1)) printf(" ");
+        }
+        printf(")");
+        break;
+
     case NODE_TYPE_REFERENCE:
         printf("(REFERENCE l:%s r:%d)", n->u.reference->label, n->u.reference->repeat_count);
         break;
@@ -582,7 +627,7 @@ void print_ast(struct node *n) {
         printf("(CRATE ");
         for (size_t i = 0; i < n->n; i++) {
             print_ast(n->nodes[i]);
-            if (i != (n->n - 1)) printf(" "); // unnecessary
+            if (i != (n->n - 1)) printf(" ");
         }
         printf(")\n");
         break;

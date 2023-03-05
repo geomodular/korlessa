@@ -12,6 +12,7 @@ struct note {
     char letter;
     char *accidental;
     int octave;
+    int velocity;
 };
 
 struct interval {
@@ -53,9 +54,10 @@ enum node_type {
     NODE_TYPE_CONTROLLER = 8,
     NODE_TYPE_PROGRAM = 9,
     NODE_TYPE_SHEET = 10,
-    NODE_TYPE_REFERENCE = 11,
-    NODE_TYPE_CRATE = 12,
-    NODE_TYPE_EOF = 13,
+    NODE_TYPE_LEGATO = 11,
+    NODE_TYPE_REFERENCE = 12,
+    NODE_TYPE_CRATE = 13,
+    NODE_TYPE_EOF = 14,
 };
 
 struct node {
@@ -72,7 +74,7 @@ struct node {
         struct program *program;
     } u;
 
-    // crate
+    // crate and legato
     size_t n;
     struct node **nodes;
 };
@@ -91,6 +93,7 @@ struct parser {
     mpc_parser_t *reference;
     mpc_parser_t *label;
     mpc_parser_t *sheet;
+    mpc_parser_t *legato;
     mpc_parser_t *root;
 };
 

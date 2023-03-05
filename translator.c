@@ -115,6 +115,7 @@ struct context {
     struct event_list *last_note;
     struct event_list *last_interval;
     bool referencing;
+    bool legato;
 };
 
 struct context init_context() {
@@ -133,6 +134,7 @@ struct context init_context() {
         .last_note = NULL,
         .last_interval = NULL,
         .referencing = false,
+        .legato = false,
     };
 }
 
@@ -172,15 +174,20 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
     {
         struct note *note = n->u.note;
 
-        if (note->octave == -1)
-            note->octave = ctx->octave;
-
         if (note->channel == -1)
             note->channel = ctx->channel;
 
+        if (note->octave == -1)
+            note->octave = ctx->octave;
+
+        if (note->velocity == -1)
+            note->velocity = ctx->velocity;
+
         snd_seq_event_t e = translate_note(ctx, note);
         struct event_list *entry = new_event_list(e);
+        ctx->channel = note->channel;
         ctx->octave = note->octave;
+        ctx->velocity = note->velocity;
         ctx->last_note = entry;
         ctx->last_interval = NULL;
         ctx->offset += compute_duration(ctx->divider);
@@ -249,6 +256,18 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
     case NODE_TYPE_DIVIDER:
         // No action for divider
         break;
+
+    case NODE_TYPE_LEGATO:
+    {
+        ctx->legato = true;
+        struct event_list *list = NULL;
+        for (size_t i = 0; i < n->n; i++) {
+            if (i == (n->n - 1)) ctx->legato = false; // Legato is turned off on the last element
+            struct event_list *part = _translate(ctx, n->nodes[i]);
+            list = list_append(list, part);
+        };
+        return list;
+    }
 
     case NODE_TYPE_SHEET:
     {
@@ -438,20 +457,30 @@ unsigned char midi_value(struct note *n) {
 snd_seq_event_t translate_note(struct context *ctx, struct note *n) {
 
     unsigned int tick = compute_duration(ctx->divider);
-    tick -= 4; // without this the note would sound like legato
+    if (ctx->legato) {
+        tick++;
+    } else {
+        tick -= 4;
+    }
+
+    unsigned char velocity = (double) n->velocity / 9. * 127.;
 
     snd_seq_event_t e;
     snd_seq_ev_clear(&e);
     snd_seq_ev_set_subs(&e);
     snd_seq_ev_schedule_tick(&e, 0, 0, ctx->offset);
-    snd_seq_ev_set_note(&e, n->channel, midi_value(n), ctx->velocity, tick);
+    snd_seq_ev_set_note(&e, n->channel, midi_value(n), velocity, tick);
     return e;
 }
 
 snd_seq_event_t translate_interval(struct context *ctx, snd_seq_event_t event, struct interval *i) {
 
     unsigned int tick = compute_duration(ctx->divider);
-    tick -= 4; // without this the note would sound like legato
+    if (ctx->legato) {
+        tick++;
+    } else {
+        tick -= 4;
+    }
     
     snd_seq_event_t e = event;
     snd_seq_ev_schedule_tick(&e, 0, 0, ctx->offset);
