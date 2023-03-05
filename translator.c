@@ -111,7 +111,7 @@ struct context {
     struct offset_stack *offset_stack;
     unsigned char channel;
     double divider;
-    unsigned char velocity; 
+    int velocity; 
     struct event_list *last_note;
     struct event_list *last_interval;
     bool referencing;
@@ -130,7 +130,7 @@ struct context init_context() {
         .offset_stack = NULL,
         .channel = 0,
         .divider = 1.,
-        .velocity = 127,
+        .velocity = 9,
         .last_note = NULL,
         .last_interval = NULL,
         .referencing = false,
