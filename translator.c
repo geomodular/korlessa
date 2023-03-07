@@ -18,15 +18,15 @@ struct event_list *new_event_list(snd_seq_event_t e) {
 
 struct sheet_reference {
     struct list l;
-    struct sheet *s;
+    struct node *node;
     char *label;
     double divider;
 };
 
-struct sheet_reference *new_sheet_reference(struct sheet *s, char *label, double divider) {
+struct sheet_reference *new_sheet_reference(struct node *node, char *label, double divider) {
     struct sheet_reference *ptr = calloc(1, sizeof(struct sheet_reference));
     if (ptr == NULL) return NULL;
-    ptr->s = s;
+    ptr->node = node;
     ptr->label = label;
     ptr->divider = divider;
     return ptr;
@@ -275,7 +275,7 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
         if (isNotEmpty(n->u.sheet->label) && !ctx->referencing) {
             ctx->namespace = list_append(ctx->namespace, new_namespace(n->u.sheet->label));
             char *label = get_label(ctx->namespace);
-            struct sheet_reference *r = new_sheet_reference(n->u.sheet, label, ctx->divider); 
+            struct sheet_reference *r = new_sheet_reference(n, label, ctx->divider); 
             ctx->sheets = list_append(ctx->sheets, r);
         }
 
@@ -294,18 +294,18 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
         struct event_list *list = NULL;
         for (size_t i = 0; i < count; i++) {
             ctx->offset_stack = list_append(ctx->offset_stack, new_offset_stack(ctx->offset));
-            for (size_t j = 0; j < n->u.sheet->n; j++) {
+            for (size_t j = 0; j < n->n; j++) {
                 double duration = n->u.sheet->duration;
                 int units = n->u.sheet->units;
                 ctx->divider = d * (duration / (double) units);
-                struct event_list *part = _translate(ctx, n->u.sheet->nodes[j]);
+                struct event_list *part = _translate(ctx, n->nodes[j]);
 
                 // Loop flag for this sheet and first element
                 if (loop && j == 0)
                     part->start_loop = true;
 
                 // Loop flag for this sheet and last element
-                if (loop && j == (n->u.sheet->n-1)) {
+                if (loop && j == (n->n-1)) {
                     if (ctx->last_note != NULL) {
                         ctx->last_note->end_loop = true;
                         ctx->last_note->loop_offset = ctx->offset - old_offset;
@@ -344,16 +344,16 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
             struct event_list *list = NULL;
             for (size_t i = 0; i < count; i++) {
                 ctx->offset_stack = list_append(ctx->offset_stack, new_offset_stack(ctx->offset));
-                for (size_t j = 0; j < r->s->n; j++) {
-                    ctx->divider = r->divider * (r->s->duration / (double) r->s->units); // reset value on each iteration
-                    struct event_list *part = _translate(ctx, r->s->nodes[j]);
+                for (size_t j = 0; j < r->node->n; j++) {
+                    ctx->divider = r->divider * (r->node->u.sheet->duration / (double) r->node->u.sheet->units); // reset value on each iteration
+                    struct event_list *part = _translate(ctx, r->node->nodes[j]);
 
                     // Loop flag for this sheet and first element
                     if (loop && j == 0)
                         part->start_loop = true;
 
                     // Loop flag for this sheet and last element/note
-                    if (loop && j == (r->s->n-1)) {
+                    if (loop && j == (r->node->n-1)) {
                         if (ctx->last_note != NULL) {
                             ctx->last_note->end_loop = true;
                             ctx->last_note->loop_offset = ctx->offset - old_offset;

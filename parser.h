@@ -24,8 +24,6 @@ struct sheet {
     int units;
     int duration;
     int repeat_count;
-    size_t n;
-    struct node **nodes;
 };
 
 struct reference {

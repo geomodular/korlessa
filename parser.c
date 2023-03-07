@@ -276,7 +276,7 @@ mpc_val_t *sheet_fold(int n, mpc_val_t **xs) {
 
     // TODO: use create as a base for sheet
 
-    struct node *node = calloc(1, sizeof(struct node));
+    // struct node *node = calloc(1, sizeof(struct node));
     struct sheet *sheet = calloc(1, sizeof(struct sheet));
     struct node *crate = xs[2];
 
@@ -286,18 +286,18 @@ mpc_val_t *sheet_fold(int n, mpc_val_t **xs) {
     sheet->units = strtol(xs[1], &ptr, 10);
     sheet->duration = strtol(&ptr[1], NULL, 10);
     sheet->repeat_count = *(int *) xs[3];
-    sheet->n = crate->n;
-    sheet->nodes = crate->nodes;
+    // sheet->n = crate->n;
+    // sheet->nodes = crate->nodes;
 
-    node->type = NODE_TYPE_SHEET;
-    node->u.sheet = sheet;
+    crate->type = NODE_TYPE_SHEET;
+    crate->u.sheet = sheet;
 
     // free(xs[0]); // label/ident
     free(xs[1]); // duration/digits
-    free(xs[2]); // crate/node
+    // free(xs[2]); // crate/node
     free(xs[3]); // repeater/int
 
-    return node;
+    return crate;
 }
 
 mpc_val_t *node_fold(int n, mpc_val_t **xs) {
@@ -517,16 +517,16 @@ void free_node(mpc_val_t *x) {
         break;
 
     case NODE_TYPE_SHEET:
-        for (size_t i = 0; i < n->u.sheet->n; i++) {
-            free_node(n->u.sheet->nodes[i]);
-            n->u.sheet->nodes[i] = NULL;
+        for (size_t i = 0; i < n->n; i++) {
+            free_node(n->nodes[i]);
+            n->nodes[i] = NULL;
         }
         free(n->u.sheet->label);
         n->u.sheet->label = NULL;
-        free(n->u.sheet->nodes);
-        n->u.sheet->nodes = NULL;
         free(n->u.sheet);
         n->u.sheet = NULL;
+        free(n->nodes);
+        n->nodes = NULL;
         break;
 
     case NODE_TYPE_REFERENCE:
@@ -595,9 +595,9 @@ void print_ast(struct node *n) {
 
     case NODE_TYPE_SHEET:
         printf("(SHEET l:%s u:%d d:%d r:%d ", n->u.sheet->label, n->u.sheet->units, n->u.sheet->duration, n->u.sheet->repeat_count);
-        for (size_t i = 0; i < n->u.sheet->n; i++) {
-            print_ast(n->u.sheet->nodes[i]);
-            if (i != (n->u.sheet->n - 1)) printf(" ");
+        for (size_t i = 0; i < n->n; i++) {
+            print_ast(n->nodes[i]);
+            if (i != (n->n - 1)) printf(" ");
         }
         printf(")");
         break;
