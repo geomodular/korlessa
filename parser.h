@@ -48,14 +48,13 @@ enum node_type {
     NODE_TYPE_REST = 4,
     NODE_TYPE_TIE = 5,
     NODE_TYPE_DIVIDER = 6,
-    NODE_TYPE_REWIND = 7,
-    NODE_TYPE_CONTROLLER = 8,
-    NODE_TYPE_PROGRAM = 9,
-    NODE_TYPE_SHEET = 10,
-    NODE_TYPE_LEGATO = 11,
-    NODE_TYPE_REFERENCE = 12,
-    NODE_TYPE_CRATE = 13,
-    NODE_TYPE_EOF = 14,
+    NODE_TYPE_CONTROLLER = 7,
+    NODE_TYPE_PROGRAM = 8,
+    NODE_TYPE_SHEET = 9,
+    NODE_TYPE_LEGATO = 10,
+    NODE_TYPE_REFERENCE = 11,
+    NODE_TYPE_CRATE = 12,
+    NODE_TYPE_EOF = 13,
 };
 
 struct node {
@@ -72,7 +71,7 @@ struct node {
         struct program *program;
     } u;
 
-    // crate and legato
+    // crate, legato and sheet
     size_t n;
     struct node **nodes;
 };
@@ -83,7 +82,6 @@ struct parser {
     mpc_parser_t *rest;
     mpc_parser_t *tie;
     mpc_parser_t *divider;
-    mpc_parser_t *rewind;
     mpc_parser_t *controller;
     mpc_parser_t *program;
     mpc_parser_t *repeater;

@@ -19,7 +19,6 @@ mpc_val_t *ctor_one();
 mpc_val_t *apply_rest(mpc_val_t *x);
 mpc_val_t *apply_tie(mpc_val_t *x);
 mpc_val_t *apply_divider(mpc_val_t *x);
-mpc_val_t *apply_rewind(mpc_val_t *x);
 mpc_val_t *apply_eof(mpc_val_t *x);
 mpc_val_t *apply_as_duration(mpc_val_t *x);
 mpc_val_t *apply_loop(mpc_val_t *x);
@@ -32,7 +31,6 @@ struct parser new_parser() {
     mpc_parser_t* rest = mpc_new("rest");
     mpc_parser_t* tie = mpc_new("tie");
     mpc_parser_t* divider = mpc_new("divider");
-    mpc_parser_t* rewind = mpc_new("rewind");
     mpc_parser_t* controller = mpc_new("controller");
     mpc_parser_t* program = mpc_new("program");
     mpc_parser_t* repeater = mpc_new("repeater");
@@ -72,9 +70,6 @@ struct parser new_parser() {
 
     // Divider: |
     mpc_define(divider, mpc_apply(mpc_char('|'), apply_divider));
-
-    // Rewind: rw
-    mpc_define(rewind, mpc_apply(mpc_or(2, mpc_string("rw"), mpc_string("rewind")), apply_rewind));
 
     // Control change: cc9:129
     mpc_define(controller, mpc_and(4, controller_fold,
@@ -139,13 +134,12 @@ struct parser new_parser() {
         4, sheet_fold,
         mpc_maybe_lift(label, mpcf_ctor_str),
         duration,
-        mpc_tok_brackets(mpc_many(node_fold, mpc_or(11,
+        mpc_tok_brackets(mpc_many(node_fold, mpc_or(10,
             mpc_tok(rest),
             mpc_tok(interval),
             mpc_tok(tie),
             mpc_tok(divider),
             mpc_tok(comment),
-            mpc_tok(rewind),
             mpc_tok(legato),
             mpc_tok(sheet),
             mpc_tok(controller),
@@ -156,11 +150,10 @@ struct parser new_parser() {
         free, free, free_node));
 
     // Top level statements
-    mpc_parser_t *crate = mpc_total(mpc_many(node_fold, mpc_or(7,
+    mpc_parser_t *crate = mpc_total(mpc_many(node_fold, mpc_or(6,
         mpc_tok(sheet),
         mpc_tok(reference),
         mpc_tok(bpm),
-        mpc_tok(rewind),
         mpc_tok(controller),
         mpc_tok(program),
         mpc_tok(comment)
@@ -175,7 +168,6 @@ struct parser new_parser() {
         .rest = rest,
         .tie = tie,
         .divider = divider,
-        .rewind = rewind,
         .controller = controller,
         .program = program,
         .repeater = repeater,
@@ -192,7 +184,7 @@ void free_parser(struct parser *p) {
 
     if (p == NULL) return;
 
-    mpc_cleanup(15,
+    mpc_cleanup(14,
         p->note,
         p->interval,
         p->rest,
@@ -200,7 +192,6 @@ void free_parser(struct parser *p) {
         p->divider,
         p->controller,
         p->program,
-        p->rewind,
         p->repeater,
         p->comment,
         p->reference,
@@ -274,11 +265,8 @@ mpc_val_t *interval_fold(int n, mpc_val_t **xs) {
 
 mpc_val_t *sheet_fold(int n, mpc_val_t **xs) {
 
-    // TODO: use create as a base for sheet
-
-    // struct node *node = calloc(1, sizeof(struct node));
     struct sheet *sheet = calloc(1, sizeof(struct sheet));
-    struct node *crate = xs[2];
+    struct node *crate = xs[2]; // Let's just reuse the crate for a sheet
 
     char *ptr = NULL;
 
@@ -286,8 +274,6 @@ mpc_val_t *sheet_fold(int n, mpc_val_t **xs) {
     sheet->units = strtol(xs[1], &ptr, 10);
     sheet->duration = strtol(&ptr[1], NULL, 10);
     sheet->repeat_count = *(int *) xs[3];
-    // sheet->n = crate->n;
-    // sheet->nodes = crate->nodes;
 
     crate->type = NODE_TYPE_SHEET;
     crate->u.sheet = sheet;
@@ -440,14 +426,6 @@ mpc_val_t *apply_divider(mpc_val_t *x) {
     return node;
 }
 
-
-mpc_val_t *apply_rewind(mpc_val_t *x) {
-    struct node *node = calloc(1, sizeof(struct node));
-    node->type = NODE_TYPE_REWIND;
-    free(x);
-    return node;
-}
-
 mpc_val_t *apply_eof(mpc_val_t *x) {
     struct node *n = x;
     assert(n->type == NODE_TYPE_CRATE);
@@ -512,7 +490,6 @@ void free_node(mpc_val_t *x) {
     case NODE_TYPE_REST:
     case NODE_TYPE_TIE:
     case NODE_TYPE_DIVIDER:
-    case NODE_TYPE_REWIND:
     case NODE_TYPE_EOF:
         break;
 
@@ -587,10 +564,6 @@ void print_ast(struct node *n) {
 
     case NODE_TYPE_DIVIDER:
         printf("(DIVIDER)");
-        break;
-
-    case NODE_TYPE_REWIND:
-        printf("(REWIND)");
         break;
 
     case NODE_TYPE_SHEET:
