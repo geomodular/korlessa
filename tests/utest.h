@@ -3,12 +3,12 @@
 #define utest(MESSAGE, BLOCK) { \
   int passed = 0; \
   int error = 0; \
-  fprintf(stderr, "... " MESSAGE); \
+  printf("... " MESSAGE); \
   BLOCK \
   if (error > 0) { \
-    fprintf(stderr, "\n"); \
+    printf("\n"); \
   } else { \
-    fprintf(stderr, " ... ok\n"); \
+    printf(" ... ok\n"); \
   } \
   _passed += passed; \
   _error += error; \
@@ -19,7 +19,7 @@
     passed++; \
   } else { \
     error++; \
-    fprintf(stderr, "\n...... ERROR " MESSAGE); \
+    printf("\n...... ERROR " MESSAGE); \
   } \
 }
 

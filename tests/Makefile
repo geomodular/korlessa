@@ -7,8 +7,8 @@ clean:
 	@rm -rf list
 
 list: list_test.c ../list.c ../list.h
-	$(CC) list_test.c ../list.c -o $@
+	$(CC) -g -O0 list_test.c ../list.c -o $@
 
 run: list
-	@./list
+	valgrind --leak-check=yes --error-exitcode=1 ./list
 
