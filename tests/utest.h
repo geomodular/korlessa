@@ -1,28 +1,17 @@
 #pragma once
 
-#define utest(MESSAGE, BLOCK) { \
-  int passed = 0; \
-  int error = 0; \
-  printf("... " MESSAGE); \
-  BLOCK \
-  if (error > 0) { \
-    printf("\n"); \
-  } else { \
-    printf(" ... ok\n"); \
-  } \
-  _passed += passed; \
-  _error += error; \
-}
+#include <stdbool.h>
 
-#define equal(EXPRESSION, MESSAGE) { \
-  if (EXPRESSION) { \
-    passed++; \
-  } else { \
-    error++; \
-    printf("\n...... ERROR " MESSAGE); \
-  } \
-}
+struct test {
+    int failed;
+    int passed;
+};
 
-#define init(MESSAGE) printf(MESSAGE "\n"); int _passed = 0; int _error = 0;
-#define print_results() printf("%d passed %d errors\n", _passed, _error);
+typedef void (*test_fn)(struct test*);
+
+void _fail(struct test *t, const char *fname, char *format, ...);
+bool run(const char *name, test_fn tests[]);
+
+#define fail(STRUCT_TEST, FORMAT) _fail(STRUCT_TEST, __func__, FORMAT)
+#define failf(STRUCT_TEST, FORMAT, ...) _fail(STRUCT_TEST, __func__, FORMAT, __VA_ARGS__)
 

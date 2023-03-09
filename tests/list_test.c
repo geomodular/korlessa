@@ -14,103 +14,141 @@ typedef struct person Person;
 
 Person *get_static_list();
 
+void test_initialize(struct test *t) {
+    Person p = {.name = "Mirka"};
+    void *v = list_append(NULL, &p);
+    if (v != &p)
+        fail(t, "v should initialize to p");
+}
+
+void test_append(struct test *t) {
+    Person p1 = {.name = "Martin"};
+    Person p2 = {.name = "Marek"};
+    list_append(&p1, &p2);
+    if (p1.l.next != &p2)
+        fail(t, "p1 should point to p2");
+}
+
+void test_size_of_full_list(struct test *t) {
+    Person *ps = get_static_list();
+    int size = list_size(ps);
+    if (size != 5)
+        failf(t, "expected size 5 got %d", size);
+}
+
+void test_size_of_one_element(struct test *t) {
+    Person p = {.name = "Mojmir"};
+    int size = list_size(&p);
+    if (size != 1)
+        failf(t, "expected size 1 got %d", size);
+}
+
+void test_size_of_null(struct test *t) {
+    int size = list_size(NULL);
+    if (size != 0)
+        failf(t, "expected size 0 got %d", size);
+}
+
+void test_go_to_first_element(struct test *t) {
+    Person *ps = get_static_list();
+    Person *p = list_goto(ps, 0);
+    if (strcmp("Maria", p->name) != 0)
+        failf(t, "expected name Maria got %s", p->name);
+}
+
+void test_go_to_index_3(struct test *t) {
+    Person *ps = get_static_list();
+    Person *p = list_goto(ps, 3);
+    if (strcmp("Martina", p->name) != 0)
+        failf(t, "expected name Martina got %s", p->name);
+}
+
+void test_go_to_last_element(struct test *t) {
+    Person *ps = get_static_list();
+    Person *p = list_goto_last(ps);
+    if (strcmp("Monika", p->name) != 0)
+        failf(t, "expected name Monika got %s", p->name);
+}
+
+void test_go_to_non_existing_index(struct test *t) {
+    Person *ps = get_static_list();
+    Person *p = list_goto(ps, 20);
+    if (p != NULL)
+        fail(t, "p should be NULL");
+}
+
+void test_go_over_null_list(struct test *t) {
+    Person *ps = get_static_list();
+    Person *p = list_goto(NULL, 0);
+    if (p != NULL)
+        fail(t, "p should be NULL");
+}
+
+void test_go_to_last_element_over_null_list(struct test *t) {
+    Person *ps = get_static_list();
+    Person *p = list_goto_last(NULL);
+    if (p != NULL)
+        fail(t, "p should be NULL");
+}
+
+void test_insert_after_first_element(struct test *t) {
+    Person *ps = get_static_list();
+    Person new_p = {.name = "Margita"};
+    list_insert_after(ps, 0, &new_p);
+    Person *p = list_goto(ps, 1);
+
+    int size = list_size(ps);
+    if (size != 6)
+        failf(t, "expected size 6 got %d", size);
+
+    if (strcmp("Margita", p->name) != 0)
+        failf(t, "expected name Margita got %s", p->name);
+}
+
+void test_insert_after_last_element(struct test *t) {
+    Person *ps = get_static_list();
+    Person new_p = {.name = "Melania"};
+    list_insert_after(ps, 4, &new_p);
+    Person *p = list_goto(ps, 5);
+
+    int size = list_size(ps);
+    if (size != 6)
+        failf(t, "expected size 6 got %d", size);
+
+    if (strcmp("Melania", p->name) != 0)
+        failf(t, "expected name Melania got %s", p->name);
+}
+
+void test_insert_into_null_list(struct test *t) {
+    Person new_p = {.name = "Miska"};
+    list_insert_after(NULL, 0, &new_p);
+    if (new_p.l.next != NULL)
+        fail(t, "next item should stay NULL");
+}
+
 int main(int argc, char **argv) {
-    init("Linked list");
 
-    utest("Initialize", {
-        Person p1 = {.name = "Mirka"};
-        void *v = list_append(NULL, &p1);
-        equal(v == &p1, "v should initialize to p1");
-    });
+    static test_fn tests[] = {
+        test_initialize, 
+        test_append,
+        test_size_of_full_list, 
+        test_size_of_one_element, 
+        test_size_of_null,
+        test_go_to_first_element,
+        test_go_to_index_3,
+        test_go_to_last_element, 
+        test_go_to_non_existing_index,
+        test_go_over_null_list, 
+        test_go_to_last_element_over_null_list, 
+        test_insert_after_first_element, 
+        test_insert_after_last_element, 
+        test_insert_into_null_list, 
+        NULL,
+    };
 
-    utest("Append", {
-        Person p1 = {.name = "Martin"};
-        Person p2 = {.name = "Marek"};
-        list_append(&p1, &p2);
-        equal(p1.l.next == &p2, "p1 should point to p2");
-    });
-
-    utest("Size of full list", {
-        Person *ps = get_static_list();
-        int size = list_size(ps);
-        equal(size == 5, "size != 5");
-    });
-
-    utest("Size of one element", {
-        Person p = {.name = "Mojmir"};
-        int size = list_size(&p);
-        equal(size == 1, "size != 1");
-    });
-
-    utest("Size of NULL", {
-        int size = list_size(NULL);
-        equal(size == 0, "size != 0");
-    });
-
-    utest("Go to first element", {
-        Person *ps = get_static_list();
-        Person *p = list_goto(ps, 0);
-        equal(strcmp("Maria", p->name) == 0, "name != Maria");
-    });
-
-    utest("Go to index 3", {
-        Person *ps = get_static_list();
-        Person *p = list_goto(ps, 3);
-        equal(strcmp("Martina", p->name) == 0, "name != Martina");
-    });
-
-    utest("Go to last element", {
-        Person *ps = get_static_list();
-        Person *p = list_goto_last(ps);
-        equal(strcmp("Monika", p->name) == 0, "name != Monika");
-    });
-
-    utest("Go to non existing index", {
-        Person *ps = get_static_list();
-        Person *p = list_goto(ps, 20);
-        equal(p == NULL, "p != NULL");
-    });
-
-    utest("Go to over NULL list", {
-        Person *ps = get_static_list();
-        Person *p = list_goto(NULL, 0);
-        equal(p == NULL, "p != NULL");
-    });
-
-    utest("Go to last element over NULL list", {
-        Person *ps = get_static_list();
-        Person *p = list_goto_last(NULL);
-        equal(p == NULL, "p != NULL");
-    });
-
-    utest("Insert after first element", {
-        Person *ps = get_static_list();
-        Person new_p = {.name = "Margita"};
-        list_insert_after(ps, 0, &new_p);
-        Person *p = list_goto(ps, 1);
-        equal(list_size(ps) == 6, "size != 6");
-        equal(strcmp(p->name, "Margita") == 0, "name != Margita");
-    });
-
-    utest("Insert after last element", {
-        Person *ps = get_static_list();
-        Person new_p = {.name = "Melania"};
-        list_insert_after(ps, 4, &new_p);
-        Person *p = list_goto(ps, 5);
-        equal(list_size(ps) == 6, "size != 6");
-        equal(strcmp(p->name, "Melania") == 0, "name != Melania");
-    });
-
-    utest("Insert into NULL list", {
-        Person new_p = {.name = "Melania"};
-        list_insert_after(NULL, 0, &new_p);
-        equal(new_p.l.next == NULL, "next item should stay the same")
-    });
-
-    print_results();
-    if (_error > 0)
-        return EXIT_FAILURE;
-    return EXIT_SUCCESS;
+    if (run("Linked list", tests))
+        return EXIT_SUCCESS;
+    return EXIT_FAILURE;
 }
 
 Person *get_static_list() {
