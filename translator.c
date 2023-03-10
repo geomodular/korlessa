@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdio.h>
 #include <stdbool.h>
 #include <alsa/asoundlib.h>
 
@@ -129,14 +130,14 @@ snd_seq_event_t translate_controller(struct context *ctx, struct controller *c);
 snd_seq_event_t translate_program(struct context *ctx, struct program *p);
 snd_seq_event_t translate_eof(struct context *ctx);
 snd_seq_event_t translate_tempo(struct context *ctx, unsigned int tempo);
-void print_event(struct event_list *l);
+void print_event(struct event_list *l, FILE *f);
 
 // Duration of the note in ticks
 unsigned int compute_duration(double divider) {
     double d = (PULSE_PER_QUARTER * 4) / divider;
     unsigned int ret = (unsigned int) d;
     if (d - ret > 0)
-        printf("warning, not in pulse\n");
+        fprintf(stderr, "warning, not in pulse\n");
     return ret;
 }
 
@@ -500,7 +501,7 @@ snd_seq_event_t translate_tempo(struct context *ctx, unsigned int tempo) {
     return e;
 }
 
-void print_event(struct event_list *l) {
+void print_event(struct event_list *l, FILE *f) {
 
     snd_seq_event_t e = l->e;
 
@@ -516,33 +517,33 @@ void print_event(struct event_list *l) {
             } else if (l->end_loop) {
                 loop = "L-END ";
             }
-            printf("(NOTE %st:%u ch:%u d:%u n:%u v:%u) ", loop, e.time.tick, n.channel, n.duration, n.note, n.velocity);
+            fprintf(f, "(NOTE %st:%u ch:%u d:%u n:%u v:%u) ", loop, e.time.tick, n.channel, n.duration, n.note, n.velocity);
             break;
         }
 
         case SND_SEQ_EVENT_CONTROLLER:
-            printf("(CC p:%u v:%d) ", e.data.control.param, e.data.control.value);
+            fprintf(f, "(CC p:%u v:%d) ", e.data.control.param, e.data.control.value);
             break;
 
         case SND_SEQ_EVENT_PGMCHANGE:
-            printf("(PGM v:%d) ", e.data.control.value);
+            fprintf(f, "(PGM v:%d) ", e.data.control.value);
             break;
 
         case SND_SEQ_EVENT_TEMPO:
-            printf("(TEMPO t:%u bpm:%d) ", e.time.tick, e.data.queue.param.value);
+            fprintf(f, "(TEMPO t:%u bpm:%d) ", e.time.tick, e.data.queue.param.value);
             break;
 
         case SND_SEQ_EVENT_USR0:
-            printf("(USR0 t:%u) ", e.time.tick);
+            fprintf(f, "(USR0 t:%u) ", e.time.tick);
             break;
     }
 }
 
-void print_events(struct event_list *l) {
+void print_events(struct event_list *l, FILE *f) {
     if (l == NULL) {
-        printf("\n");
+        fprintf(f, "\n");
         return;
     }
-    print_event(l);
-    print_events(l->l.next);
+    print_event(l, f);
+    print_events(l->l.next, f);
 }

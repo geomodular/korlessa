@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdio.h>
 #include <stdbool.h>
 #include <alsa/asoundlib.h>
 
@@ -17,5 +18,5 @@ struct event_list {
 struct event_list *translate(struct node n);
 
 // debug functions
-void print_events(struct event_list *l);
+void print_events(struct event_list *l, FILE *f);
 

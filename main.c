@@ -136,14 +136,14 @@ int main(int argc, char **argv) {
     }
 
     if (args.print_ast) {
-        print_ast(res.n);
+        print_ast(res.n, stdout);
         goto SUCCESS_2;
     }
 
     struct event_list *list = translate(*res.n);
 
     if (args.print_events) {
-        print_events(list);
+        print_events(list, stdout);
         goto SUCCESS_3;
     }
 

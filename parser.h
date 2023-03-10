@@ -1,6 +1,6 @@
 #pragma once
 
-#include <stdlib.h>
+#include <stdio.h>
 #include "lib/mpc.h"
 
 struct bpm {
@@ -106,5 +106,5 @@ struct parse_result parse_file(const char *filename, struct parser p, FILE *in);
 void free_parse_result(struct parse_result *p);
 
 // debug functions
-void print_ast(struct node *n);
+void print_ast(struct node *n, FILE *f);
 

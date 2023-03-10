@@ -540,77 +540,77 @@ void free_node(mpc_val_t *x) {
     free(n);
 }
 
-void print_ast(struct node *n) {
+void print_ast(struct node *n, FILE *f) {
     switch (n->type) {
     case NODE_TYPE_BPM:
-        printf("(BPM bpm:%d)", n->u.bpm->value);
+        fprintf(f, "(BPM bpm:%d)", n->u.bpm->value);
         break;
 
     case NODE_TYPE_NOTE:
-        printf("(NOTE ch:%d n:%c a:%s o:%d v:%d)", n->u.note->channel, n->u.note->letter, n->u.note->accidental, n->u.note->octave, n->u.note->velocity);
+        fprintf(f, "(NOTE ch:%d n:%c a:%s o:%d v:%d)", n->u.note->channel, n->u.note->letter, n->u.note->accidental, n->u.note->octave, n->u.note->velocity);
         break;
 
     case NODE_TYPE_INTERVAL:
-        printf("(INTERVAL v:%d)", n->u.interval->value);
+        fprintf(f, "(INTERVAL v:%d)", n->u.interval->value);
         break;
 
     case NODE_TYPE_REST:
-        printf("(REST)");
+        fprintf(f, "(REST)");
         break;
 
     case NODE_TYPE_TIE:
-        printf("(TIE)");
+        fprintf(f, "(TIE)");
         break;
 
     case NODE_TYPE_DIVIDER:
-        printf("(DIVIDER)");
+        fprintf(f, "(DIVIDER)");
         break;
 
     case NODE_TYPE_SHEET:
-        printf("(SHEET l:%s u:%d d:%d r:%d ", n->u.sheet->label, n->u.sheet->units, n->u.sheet->duration, n->u.sheet->repeat_count);
+        fprintf(f, "(SHEET l:%s u:%d d:%d r:%d ", n->u.sheet->label, n->u.sheet->units, n->u.sheet->duration, n->u.sheet->repeat_count);
         for (size_t i = 0; i < n->n; i++) {
-            print_ast(n->nodes[i]);
-            if (i != (n->n - 1)) printf(" ");
+            print_ast(n->nodes[i], f);
+            if (i != (n->n - 1)) fprintf(f, " ");
         }
-        printf(")");
+        fprintf(f, ")");
         break;
 
     case NODE_TYPE_LEGATO:
-        printf("(LEGATO ");
+        fprintf(f, "(LEGATO ");
         for (size_t i = 0; i < n->n; i++) {
-            print_ast(n->nodes[i]);
-            if (i != (n->n - 1)) printf(" ");
+            print_ast(n->nodes[i], f);
+            if (i != (n->n - 1)) fprintf(f, " ");
         }
-        printf(")");
+        fprintf(f, ")");
         break;
 
     case NODE_TYPE_REFERENCE:
-        printf("(REFERENCE l:%s r:%d)", n->u.reference->label, n->u.reference->repeat_count);
+        fprintf(f, "(REFERENCE l:%s r:%d)", n->u.reference->label, n->u.reference->repeat_count);
         break;
 
     case NODE_TYPE_CONTROLLER:
-        printf("(CC p:%u v:%d)", n->u.controller->param, n->u.controller->value);
+        fprintf(f, "(CC p:%u v:%d)", n->u.controller->param, n->u.controller->value);
         break;
 
      case NODE_TYPE_PROGRAM:
-        printf("(PGM p:%d)", n->u.program->value);
+        fprintf(f, "(PGM p:%d)", n->u.program->value);
         break;
 
     case NODE_TYPE_CRATE:
-        printf("(CRATE ");
+        fprintf(f, "(CRATE ");
         for (size_t i = 0; i < n->n; i++) {
-            print_ast(n->nodes[i]);
-            if (i != (n->n - 1)) printf(" ");
+            print_ast(n->nodes[i], f);
+            if (i != (n->n - 1)) fprintf(f, " ");
         }
-        printf(")\n");
+        fprintf(f, ")\n");
         break;
 
     case NODE_TYPE_EOF:
-        printf("(EOF)");
+        fprintf(f, "(EOF)");
         break;
 
     case NODE_TYPE_UNKNOWN:
-        printf("(?)");
+        fprintf(f, "(?)");
         break;
     }
 }
