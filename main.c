@@ -137,6 +137,7 @@ int main(int argc, char **argv) {
 
     if (args.print_ast) {
         print_ast(res.n, stdout);
+        printf("\n");
         goto SUCCESS_2;
     }
 
@@ -144,6 +145,7 @@ int main(int argc, char **argv) {
 
     if (args.print_events) {
         print_events(list, stdout);
+        printf("\n");
         goto SUCCESS_3;
     }
 

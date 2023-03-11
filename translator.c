@@ -540,10 +540,8 @@ void print_event(struct event_list *l, FILE *f) {
 }
 
 void print_events(struct event_list *l, FILE *f) {
-    if (l == NULL) {
-        fprintf(f, "\n");
+    if (l == NULL)
         return;
-    }
     print_event(l, f);
     print_events(l->l.next, f);
 }

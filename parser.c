@@ -567,19 +567,21 @@ void print_ast(struct node *n, FILE *f) {
         break;
 
     case NODE_TYPE_SHEET:
-        fprintf(f, "(SHEET l:%s u:%d d:%d r:%d ", n->u.sheet->label, n->u.sheet->units, n->u.sheet->duration, n->u.sheet->repeat_count);
+        fprintf(f, "(SHEET l:%s u:%d d:%d r:%d", n->u.sheet->label, n->u.sheet->units, n->u.sheet->duration, n->u.sheet->repeat_count);
         for (size_t i = 0; i < n->n; i++) {
+            fprintf(f, " ");
             print_ast(n->nodes[i], f);
-            if (i != (n->n - 1)) fprintf(f, " ");
+            // if (i != (n->n - 1)) fprintf(f, " ");
         }
         fprintf(f, ")");
         break;
 
     case NODE_TYPE_LEGATO:
-        fprintf(f, "(LEGATO ");
+        fprintf(f, "(LEGATO");
         for (size_t i = 0; i < n->n; i++) {
+            fprintf(f, " ");
             print_ast(n->nodes[i], f);
-            if (i != (n->n - 1)) fprintf(f, " ");
+            // if (i != (n->n - 1)) fprintf(f, " ");
         }
         fprintf(f, ")");
         break;
@@ -597,12 +599,13 @@ void print_ast(struct node *n, FILE *f) {
         break;
 
     case NODE_TYPE_CRATE:
-        fprintf(f, "(CRATE ");
+        fprintf(f, "(CRATE");
         for (size_t i = 0; i < n->n; i++) {
+            fprintf(f, " ");
             print_ast(n->nodes[i], f);
-            if (i != (n->n - 1)) fprintf(f, " ");
+            // if (i != (n->n - 1)) fprintf(f, " ");
         }
-        fprintf(f, ")\n");
+        fprintf(f, ")");
         break;
 
     case NODE_TYPE_EOF:
