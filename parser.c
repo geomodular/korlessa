@@ -543,7 +543,7 @@ void free_node(mpc_val_t *x) {
 void print_ast(struct node *n, FILE *f) {
     switch (n->type) {
     case NODE_TYPE_BPM:
-        fprintf(f, "(BPM bpm:%d)", n->u.bpm->value);
+        fprintf(f, "(BPM v:%d)", n->u.bpm->value);
         break;
 
     case NODE_TYPE_NOTE:
@@ -571,7 +571,6 @@ void print_ast(struct node *n, FILE *f) {
         for (size_t i = 0; i < n->n; i++) {
             fprintf(f, " ");
             print_ast(n->nodes[i], f);
-            // if (i != (n->n - 1)) fprintf(f, " ");
         }
         fprintf(f, ")");
         break;
@@ -581,7 +580,6 @@ void print_ast(struct node *n, FILE *f) {
         for (size_t i = 0; i < n->n; i++) {
             fprintf(f, " ");
             print_ast(n->nodes[i], f);
-            // if (i != (n->n - 1)) fprintf(f, " ");
         }
         fprintf(f, ")");
         break;
@@ -595,7 +593,7 @@ void print_ast(struct node *n, FILE *f) {
         break;
 
      case NODE_TYPE_PROGRAM:
-        fprintf(f, "(PGM p:%d)", n->u.program->value);
+        fprintf(f, "(PGM v:%d)", n->u.program->value);
         break;
 
     case NODE_TYPE_CRATE:
@@ -603,7 +601,6 @@ void print_ast(struct node *n, FILE *f) {
         for (size_t i = 0; i < n->n; i++) {
             fprintf(f, " ");
             print_ast(n->nodes[i], f);
-            // if (i != (n->n - 1)) fprintf(f, " ");
         }
         fprintf(f, ")");
         break;

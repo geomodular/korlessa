@@ -36,6 +36,8 @@
 *.x86_64
 *.hex
 korlessa
+tests/list
+tests/parser
 
 # Debug files
 *.dSYM/
