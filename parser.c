@@ -210,11 +210,11 @@ mpc_val_t *note_fold(int n, mpc_val_t ** xs) {
     node->type = NODE_TYPE_NOTE;
     node->u.note = note;
 
-    free(xs[0]);                // channel/chars
-    free(xs[1]);                // letter/char
+    free(xs[0]); // channel/chars
+    free(xs[1]); // letter/char
     // free(xs[2]); // accidental/chars, let's keep this one
-    free(xs[3]);                // octave/int
-    free(xs[4]);                // velocity/int
+    free(xs[3]); // octave/int
+    free(xs[4]); // velocity/int
 
     return node;
 }
@@ -235,8 +235,8 @@ mpc_val_t *interval_fold(int n, mpc_val_t ** xs) {
     node->type = NODE_TYPE_INTERVAL;
     node->u.interval = interval;
 
-    free(xs[0]);                // sign/char 
-    free(xs[1]);                // digits/chars
+    free(xs[0]); // sign/char 
+    free(xs[1]); // digits/chars
 
     return node;
 }
@@ -257,9 +257,9 @@ mpc_val_t *sheet_fold(int n, mpc_val_t ** xs) {
     crate->u.sheet = sheet;
 
     // free(xs[0]); // label/ident
-    free(xs[1]);                // duration/digits
+    free(xs[1]); // duration/digits
     // free(xs[2]); // crate/node
-    free(xs[3]);                // repeater/int
+    free(xs[3]); // repeater/int
 
     return crate;
 }
@@ -303,7 +303,7 @@ mpc_val_t *reference_fold(int n, mpc_val_t ** xs) {
     node->u.reference = reference;
 
     // free(xs[0]); // label/string
-    free(xs[1]);                // repeater/digits
+    free(xs[1]); // repeater/digits
 
     return node;
 }
@@ -316,9 +316,9 @@ mpc_val_t *duration_fold(int n, mpc_val_t ** xs) {
 
     sprintf(ret, "%s:%s", units, duration);
 
-    free(xs[0]);                // units/string
-    free(xs[1]);                // 'is' | 'as' | 'to' /string
-    free(xs[2]);                // duration/string
+    free(xs[0]); // units/string
+    free(xs[1]); // 'is' | 'as' | 'to' /string
+    free(xs[2]); // duration/string
 
     return ret;
 }
@@ -330,8 +330,8 @@ mpc_val_t *repeater_fold(int n, mpc_val_t ** xs) {
 
     *ret = atoi(xs[1]);
 
-    free(xs[0]);                // 'x'/char
-    free(xs[1]);                // count/int
+    free(xs[0]); // 'x'/char
+    free(xs[1]); // count/int
 
     return ret;
 }
@@ -349,10 +349,10 @@ mpc_val_t *controller_fold(int n, mpc_val_t ** xs) {
     node->type = NODE_TYPE_CONTROLLER;
     node->u.controller = controller;
 
-    free(xs[0]);                // 'cc'/string
-    free(xs[1]);                // param/digits
-    free(xs[2]);                // ':'/char
-    free(xs[3]);                // value/int
+    free(xs[0]); // 'cc'/string
+    free(xs[1]); // param/digits
+    free(xs[2]); // ':'/char
+    free(xs[3]); // value/int
 
     return node;
 }
@@ -362,13 +362,13 @@ mpc_val_t *program_fold(int n, mpc_val_t ** xs) {
     struct node *node = calloc(1, sizeof (struct node));
     struct program *program = calloc(1, sizeof (struct program));
 
-    program->value = strtoul(xs[1], NULL, 10);  // Conversion to unsigned
+    program->value = strtoul(xs[1], NULL, 10); // Conversion to unsigned
 
     node->type = NODE_TYPE_PROGRAM;
     node->u.program = program;
 
-    free(xs[0]);                // 'pgm'/string
-    free(xs[1]);                // value/digits
+    free(xs[0]); // 'pgm'/string
+    free(xs[1]); // value/digits
 
     return node;
 }

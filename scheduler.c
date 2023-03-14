@@ -7,12 +7,12 @@
 #include "scheduler.h"
 
 
-#define DEFAULT_CLIENT_NAME "Korlessa"  // TODO: I have two such defaults
+#define DEFAULT_CLIENT_NAME "Korlessa" // TODO: I have two such defaults
 #define DEFAULT_QUEUE_SIZE 64
-#define DEFAULT_BPM 120         // TODO: make as an argument
-#define DEFAULT_PULSE_PER_QUARTER 96    // TODO: I have two such defaults
+#define DEFAULT_BPM 120 // TODO: make as an argument
+#define DEFAULT_PULSE_PER_QUARTER 96 // TODO: I have two such defaults
 #define DEFAULT_DRAIN_SIZE 48
-#define DEFAULT_POLL_TIMEOUT 1000       // ms
+#define DEFAULT_POLL_TIMEOUT 1000 // ms
 
 enum {
     DRAIN_TYPE_INDEX = 0,
@@ -76,7 +76,7 @@ int drain_events(struct event_list *list, snd_seq_t * client, int *index, int n,
     bool loop = false;
 
     for (int k = 0; entry != NULL; entry = entry->l.next, i++, k++) {
-        if (k == n - 1)         // Count with usr1
+        if (k == n - 1) // Count with usr1
             break;
         int err = snd_seq_event_output(client, &entry->e);
 
@@ -134,7 +134,7 @@ void alter_list_for_loop(struct event_list *list, int *index) {
     };
 
     if (start == NULL || end == NULL)
-        return;                 // Unreachable
+        return; // Unreachable
 
     l = start;
     while (l != NULL) {
@@ -160,7 +160,7 @@ int loop(struct event_list *list, snd_seq_t * client, int *index, snd_seq_event_
 
         if (ret < 0) {
             fprintf(stderr, "poll error occurred: %s", strerror(errno));
-            // not going to stop here
+            // NOTE: not going to stop here
         }
 
         if (ret > 0) {
@@ -177,12 +177,12 @@ int loop(struct event_list *list, snd_seq_t * client, int *index, snd_seq_event_
 
                 snd_seq_event_input(client, &e);
                 switch (e->type) {
-                case SND_SEQ_EVENT_USR0:       // stop the sequencer and program
+                case SND_SEQ_EVENT_USR0: // Stop the sequencer and program
                     printf("got usr0; stopping poll\n");
                     running = 0;
                     break;
 
-                case SND_SEQ_EVENT_USR1:       // drain another output
+                case SND_SEQ_EVENT_USR1: // Drain another output
                     if (e->data.raw32.d[DRAIN_TYPE_INDEX] == DRAIN_TYPE_LOOP) {
                         printf("got usr1 loop event\n");
                         alter_list_for_loop(list, index);
@@ -195,7 +195,7 @@ int loop(struct event_list *list, snd_seq_t * client, int *index, snd_seq_event_
                     }
                     break;
 
-                case SND_SEQ_EVENT_TEMPO:      // change tempo
+                case SND_SEQ_EVENT_TEMPO: // Change tempo
                     printf("got tempo; changing tempo\n");
                     set_tempo(client, e->data.queue.queue, e->data.queue.param.value);
                     break;
@@ -232,7 +232,7 @@ int run(struct event_list *list, snd_seq_t * client, int queue_id, snd_seq_event
     if (err == EXIT_FAILURE)
         goto FAIL_1;
 
-    signal(SIGINT, sig_handler);        // catch ctrl+c
+    signal(SIGINT, sig_handler); // catch ctrl+c
     err = loop(list, client, &index, usr1);
     if (err == EXIT_FAILURE)
         goto FAIL_1;

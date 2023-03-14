@@ -259,7 +259,7 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
 
         for (size_t i = 0; i < n->n; i++) {
             if (i == (n->n - 1))
-                ctx->legato = false;    // Legato is turned off on the last element
+                ctx->legato = false; // Legato is turned off on the last element
             struct event_list *part = _translate(ctx, n->nodes[i]);
 
             list = list_append(list, part);
@@ -547,7 +547,7 @@ snd_seq_event_t translate_tempo(struct context *ctx, unsigned int tempo) {
     snd_seq_ev_clear(&e);
     snd_seq_ev_schedule_tick(&e, 0, 0, ctx->offset);
     e.type = SND_SEQ_EVENT_TEMPO;
-    e.data.queue.param.value = tempo;   // unsafe conversion?
+    e.data.queue.param.value = tempo; // unsafe conversion?
     return e;
 }
 

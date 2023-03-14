@@ -210,7 +210,7 @@ char *read_stdin() {
                 return NULL;
             }
         }
-        buffer[i++] = c;        // possible data lost?
+        buffer[i++] = c; // possible data lost?
     }
 
     buffer[i] = '\0';
