@@ -102,9 +102,8 @@ struct parser new_parser();
 void free_parser(struct parser *p);
 
 struct parse_result parse(const char *filename, struct parser p, const char *in);
-struct parse_result parse_file(const char *filename, struct parser p, FILE *in);
+struct parse_result parse_file(const char *filename, struct parser p, FILE * in);
 void free_parse_result(struct parse_result *p);
 
 // debug functions
-void print_ast(struct node *n, FILE *f);
-
+void print_ast(struct node *n, FILE * f);

@@ -40,4 +40,3 @@ void *list_drop_apply(void *list, void (*f)(void *));
 // list_sort performs stupid bubble sort on top of `list`. The `f` should
 // return true or false based on comparing condition.
 void *list_sort(void *list, bool (*f)(void *, void *));
-

@@ -18,7 +18,8 @@
 const char *argp_program_version = "v0.1";
 const char *argp_program_bug_address = "<geomodular@gmail.com>";
 static char doc[] = "Korlessa is a notation to a midi events translator.";
-static struct argp_option options[] = { 
+
+static struct argp_option options[] = {
     {"debug", OPT_DEBUG, 0, 0, "Print additional debug info."},
     {"print-ast", OPT_PRINT_AST, 0, 0, "Print ast produced by parser and quit."},
     {"print-events", OPT_PRINT_EVENTS, 0, 0, "Print translated midi events and quit."},
@@ -47,7 +48,7 @@ struct arguments init_arguments() {
     return (struct arguments) {
         .debug = false,
         .print_ast = false,
-        .print_events= false,
+        .print_events = false,
         .list_clients = false,
         .filepath = NULL,
         .source = NULL,
@@ -59,41 +60,60 @@ struct arguments init_arguments() {
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state) {
     struct arguments *arguments = state->input;
+
     switch (key) {
-        case OPT_DEBUG: arguments->debug = true; break;
-        case OPT_PRINT_AST: arguments->print_ast = true; break;
-        case OPT_PRINT_EVENTS: arguments->print_events = true; break;
-        case 'l': arguments->list_clients = true; break;
-        case 'f': arguments->filepath = arg; break;
-        case 's': arguments->source = arg; break;
-        case OPT_CLIENT: arguments->client = atoi(arg); break;
-        case OPT_PORT: arguments->port = atoi(arg); break;
-        case 'c':
-        {
-            char *token = NULL;
-            int client = strtol(arg, &token, 10);
-            if (token[0] != ':')
-                argp_error(state, "invalid address format: %s should be <client>:<port>", arg);
-            int port = strtol(&token[1], NULL, 10);
-            arguments->client = client;
-            arguments->port = port; 
-            arguments->address = arg;
-            break;
-        }
-        case ARGP_KEY_ARG: return 0;
-        case ARGP_KEY_END:
-            if (arguments->client == 0 &&
-                arguments->print_ast == false &&
-                arguments->print_events == false &&
-                arguments->list_clients == false)
-                argp_failure(state, EXIT_FAILURE, 0, "use -c to connect to device");
-            break;
-        default: return ARGP_ERR_UNKNOWN;
+    case OPT_DEBUG:
+        arguments->debug = true;
+        break;
+    case OPT_PRINT_AST:
+        arguments->print_ast = true;
+        break;
+    case OPT_PRINT_EVENTS:
+        arguments->print_events = true;
+        break;
+    case 'l':
+        arguments->list_clients = true;
+        break;
+    case 'f':
+        arguments->filepath = arg;
+        break;
+    case 's':
+        arguments->source = arg;
+        break;
+    case OPT_CLIENT:
+        arguments->client = atoi(arg);
+        break;
+    case OPT_PORT:
+        arguments->port = atoi(arg);
+        break;
+    case 'c':
+    {
+        char *token = NULL;
+        int client = strtol(arg, &token, 10);
+
+        if (token[0] != ':')
+            argp_error(state, "invalid address format: %s should be <client>:<port>", arg);
+        int port = strtol(&token[1], NULL, 10);
+
+        arguments->client = client;
+        arguments->port = port;
+        arguments->address = arg;
+        break;
+    }
+    case ARGP_KEY_ARG:
+        return 0;
+    case ARGP_KEY_END:
+        if (arguments->client == 0 &&
+            arguments->print_ast == false && arguments->print_events == false && arguments->list_clients == false)
+            argp_failure(state, EXIT_FAILURE, 0, "use -c to connect to device");
+        break;
+    default:
+        return ARGP_ERR_UNKNOWN;
     };
     return 0;
 }
 
-static struct argp argp = {options, parse_opt, 0, doc, 0, 0, 0};
+static struct argp argp = { options, parse_opt, 0, doc, 0, 0, 0 };
 
 char *read_stdin();
 
@@ -114,6 +134,7 @@ int main(int argc, char **argv) {
         res = parse("<arg>", p, args.source);
     } else if (args.filepath) {
         FILE *f = fopen(args.filepath, "r");
+
         if (f == NULL) {
             fprintf(stderr, "failed opening file: %s\n", args.filepath);
             goto FAIL_1;
@@ -122,6 +143,7 @@ int main(int argc, char **argv) {
         fclose(f);
     } else {
         char *in = read_stdin();
+
         if (in == NULL) {
             fprintf(stderr, "failed reading from stdin\n");
             goto FAIL_1;
@@ -148,7 +170,6 @@ int main(int argc, char **argv) {
         printf("\n");
         goto SUCCESS_3;
     }
-
     // Up to this point there should be no memory leaks
     if (schedule_and_loop(list, args.client, args.port) == EXIT_FAILURE) {
         goto FAIL_3;
@@ -170,15 +191,18 @@ FAIL_1:
     return EXIT_FAILURE;
 }
 
-char* read_stdin() {
+char *read_stdin() {
     size_t buffer_size = 1024, i = 0;
-    char *buffer = calloc(sizeof(char), buffer_size + 1);
-    if (buffer == NULL) return NULL;
+    char *buffer = calloc(sizeof (char), buffer_size + 1);
+
+    if (buffer == NULL)
+        return NULL;
 
     for (int c = getchar(); c != EOF; c = getchar()) {
         if (i == buffer_size) {
             buffer_size += 1024;
-            void *ptr = realloc(buffer, buffer_size * sizeof(char) + 1);
+            void *ptr = realloc(buffer, buffer_size * sizeof (char) + 1);
+
             if (ptr != NULL) {
                 buffer = (char *) ptr;
             } else {
@@ -186,10 +210,9 @@ char* read_stdin() {
                 return NULL;
             }
         }
-        buffer[i++] = c; // possible data lost?
+        buffer[i++] = c;        // possible data lost?
     }
 
     buffer[i] = '\0';
     return buffer;
 }
-
