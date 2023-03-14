@@ -10,3 +10,8 @@ korlessa: main.c parser.c parser.h list.c list.h listing.c listing.h translator.
 .PHONY: clean
 clean:
 	rm -f korlessa
+
+.PHONY: indent
+indent:
+	indent *.c *.h
+	rm *.c~ *.h~
