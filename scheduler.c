@@ -4,13 +4,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "korlessa.h"
 #include "scheduler.h"
 
-
-#define DEFAULT_CLIENT_NAME "Korlessa" // TODO: I have two such defaults
 #define DEFAULT_QUEUE_SIZE 64
 #define DEFAULT_BPM 120 // TODO: make as an argument
-#define DEFAULT_PULSE_PER_QUARTER 96 // TODO: I have two such defaults
 #define DEFAULT_DRAIN_SIZE 48
 #define DEFAULT_POLL_TIMEOUT 1000 // ms
 
@@ -57,7 +55,7 @@ int set_tempo(snd_seq_t * client, int queue_id, int bpm) {
     }
 
     snd_seq_queue_tempo_set_tempo(qt, (unsigned int) tempo);
-    snd_seq_queue_tempo_set_ppq(qt, DEFAULT_PULSE_PER_QUARTER);
+    snd_seq_queue_tempo_set_ppq(qt, PULSE_PER_QUARTER);
     err = snd_seq_set_queue_tempo(client, queue_id, qt);
     if (err < 0) {
         fprintf(stderr, "failed changing queue tempo: %s\n", snd_strerror(err));

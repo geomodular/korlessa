@@ -65,27 +65,35 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
     case OPT_DEBUG:
         arguments->debug = true;
         break;
+
     case OPT_PRINT_AST:
         arguments->print_ast = true;
         break;
+
     case OPT_PRINT_EVENTS:
         arguments->print_events = true;
         break;
+
     case 'l':
         arguments->list_clients = true;
         break;
+
     case 'f':
         arguments->filepath = arg;
         break;
+
     case 's':
         arguments->source = arg;
         break;
+
     case OPT_CLIENT:
         arguments->client = atoi(arg);
         break;
+
     case OPT_PORT:
         arguments->port = atoi(arg);
         break;
+
     case 'c':
     {
         char *token = NULL;
@@ -100,16 +108,20 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
         arguments->address = arg;
         break;
     }
+
     case ARGP_KEY_ARG:
         return 0;
+
     case ARGP_KEY_END:
         if (arguments->client == 0 &&
             arguments->print_ast == false && arguments->print_events == false && arguments->list_clients == false)
             argp_failure(state, EXIT_FAILURE, 0, "use -c to connect to device");
         break;
+
     default:
         return ARGP_ERR_UNKNOWN;
     };
+
     return 0;
 }
 

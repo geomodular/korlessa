@@ -3,11 +3,10 @@
 #include <stdbool.h>
 #include <alsa/asoundlib.h>
 
+#include "korlessa.h"
 #include "list.h"
 #include "parser.h"
 #include "translator.h"
-
-#define PULSE_PER_QUARTER 96
 
 struct event_list *new_event_list(snd_seq_event_t e) {
     struct event_list *ptr = calloc(1, sizeof (struct event_list));

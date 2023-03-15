@@ -5,29 +5,37 @@
 
 #include <alsa/asoundlib.h>
 
+#include "korlessa.h"
+
 #define get_bit(i, x) (x & (1 << i))
 #define clear_bit(i, x) (x & (~(1 << i)))
-
-#define DEFAULT_CLIENT_NAME "korlessa-listing"
 
 const char *get_capability(unsigned int state) {
     switch (state) {
     case SND_SEQ_PORT_CAP_READ:
         return "READ";
+
     case SND_SEQ_PORT_CAP_WRITE:
         return "WRITE";
+
     case SND_SEQ_PORT_CAP_SYNC_READ:
         return "SYNC_READ";
+
     case SND_SEQ_PORT_CAP_SYNC_WRITE:
         return "SYNC_WRITE";
+
     case SND_SEQ_PORT_CAP_DUPLEX:
         return "DUPLEX";
+
     case SND_SEQ_PORT_CAP_SUBS_READ:
         return "SUBS_READ";
+
     case SND_SEQ_PORT_CAP_SUBS_WRITE:
         return "SUBS_WRITE";
+
     case SND_SEQ_PORT_CAP_NO_EXPORT:
         return "SUBS_NO_EXPORT";
+
     default:
         return "UNKNOWN";
     }
@@ -37,34 +45,49 @@ const char *get_type(unsigned int state) {
     switch (state) {
     case SND_SEQ_PORT_TYPE_SPECIFIC:
         return "SPECIFIC";
+
     case SND_SEQ_PORT_TYPE_MIDI_GENERIC:
         return "MIDI_GENERIC";
+
     case SND_SEQ_PORT_TYPE_MIDI_GM:
         return "MIDI_GM";
+
     case SND_SEQ_PORT_TYPE_MIDI_GS:
         return "MIDI_GS";
+
     case SND_SEQ_PORT_TYPE_MIDI_XG:
         return "MIDI_XG";
+
     case SND_SEQ_PORT_TYPE_MIDI_MT32:
         return "MIDI_MT32";
+
     case SND_SEQ_PORT_TYPE_MIDI_GM2:
         return "MIDI_GM2";
+
     case SND_SEQ_PORT_TYPE_SYNTH:
         return "SYNTH";
+
     case SND_SEQ_PORT_TYPE_DIRECT_SAMPLE:
         return "DIRECT_SAMPLE";
+
     case SND_SEQ_PORT_TYPE_SAMPLE:
         return "SAMPLE";
+
     case SND_SEQ_PORT_TYPE_HARDWARE:
         return "HARDWARE";
+
     case SND_SEQ_PORT_TYPE_SOFTWARE:
         return "SOFTWARE";
+
     case SND_SEQ_PORT_TYPE_SYNTHESIZER:
         return "SYNTHESIZER";
+
     case SND_SEQ_PORT_TYPE_PORT:
         return "PORT";
+
     case SND_SEQ_PORT_TYPE_APPLICATION:
         return "APPLICATION";
+
     default:
         return "UNKNOWN";
     }
