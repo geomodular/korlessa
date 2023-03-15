@@ -318,7 +318,7 @@ int schedule_and_loop(struct event_list *list, int target_client, int target_por
     }
 
     int port_out = snd_seq_create_simple_port(client, "groove-out", SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ,
-                                              SND_SEQ_PORT_TYPE_APPLICATION);
+      SND_SEQ_PORT_TYPE_APPLICATION);
 
     if (port_out < 0) {
         fprintf(stderr, "failed opening out port: %s\n", snd_strerror(port_out));
@@ -326,7 +326,7 @@ int schedule_and_loop(struct event_list *list, int target_client, int target_por
     }
 
     int port_in = snd_seq_create_simple_port(client, "groove-in", SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE,
-                                             SND_SEQ_PORT_TYPE_APPLICATION);
+      SND_SEQ_PORT_TYPE_APPLICATION);
 
     if (port_in < 0) {
         fprintf(stderr, "failed opening in port: %s\n", snd_strerror(port_in));

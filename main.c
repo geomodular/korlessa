@@ -114,7 +114,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 
     case ARGP_KEY_END:
         if (arguments->client == 0 &&
-            arguments->print_ast == false && arguments->print_events == false && arguments->list_clients == false)
+          arguments->print_ast == false && arguments->print_events == false && arguments->list_clients == false)
             argp_failure(state, EXIT_FAILURE, 0, "use -c to connect to device");
         break;
 

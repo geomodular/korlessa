@@ -50,17 +50,16 @@ struct parser new_parser() {
     mpc_parser_t *velocity = mpc_apply(mpc_and(2, mpcf_snd_free, mpc_char('!'), mpc_digit(), free), mpcf_int);
 
     mpc_define(note, mpc_and(5, note_fold,
-                             mpc_maybe_lift(channel, ctor_int_default),
-                             letter,
-                             mpc_maybe_lift(accidental, mpcf_ctor_str),
-                             mpc_maybe_lift(octave, ctor_int_default),
-                             mpc_maybe_lift(velocity, ctor_int_default), free, free, free, free));
+        mpc_maybe_lift(channel, ctor_int_default),
+        letter,
+        mpc_maybe_lift(accidental, mpcf_ctor_str),
+        mpc_maybe_lift(octave, ctor_int_default), mpc_maybe_lift(velocity, ctor_int_default), free, free, free, free));
 
     // Bpm: 120bpm
     mpc_parser_t *bpm = mpc_and(2, bpm_fold,
-                                mpc_digits(),
-                                mpc_string("bpm"),
-                                free);
+      mpc_digits(),
+      mpc_string("bpm"),
+      free);
 
     // Rest: .
     mpc_define(rest, mpc_apply(mpc_char('.'), apply_rest));
@@ -73,8 +72,7 @@ struct parser new_parser() {
 
     // Control change: cc9:129
     mpc_define(controller, mpc_and(4, controller_fold,
-                                   mpc_or(2, mpc_string("cc"), mpc_string("CC")),
-                                   mpc_digits(), mpc_char(':'), mpc_int(), free, free, free));
+        mpc_or(2, mpc_string("cc"), mpc_string("CC")), mpc_digits(), mpc_char(':'), mpc_int(), free, free, free));
 
     // Program change: pgm12
     mpc_define(program, mpc_and(2, program_fold, mpc_or(2, mpc_string("pgm"), mpc_string("PGM")), mpc_digits(), free));
@@ -84,63 +82,55 @@ struct parser new_parser() {
 
     // Reference: {label} {label1.label2}
     mpc_define(reference, mpc_and(2, reference_fold,
-                                  mpc_tok_brackets(mpc_and(2, mpcf_strfold,
-                                                           mpc_ident(),
-                                                           mpc_many(mpcf_strfold,
-                                                                    mpc_and(2, mpcf_strfold, mpc_char('.'), mpc_ident(),
-                                                                            free)), free), free), repeater, free));
+        mpc_tok_brackets(mpc_and(2, mpcf_strfold,
+            mpc_ident(),
+            mpc_many(mpcf_strfold,
+              mpc_and(2, mpcf_strfold, mpc_char('.'), mpc_ident(), free)), free), free), repeater, free));
 
     // Intervals: +2 -2
     mpc_define(interval, mpc_and(2, interval_fold, mpc_oneof("-+"), mpc_digits(), free));
 
     // Legato: (a +1 c)
     mpc_define(legato,
-               mpc_apply(mpc_tok_parens
-                         (mpc_many1(node_fold, mpc_or(3, mpc_tok(note), mpc_tok(interval), mpc_tok(divider))),
-                          free_node), apply_legato));
+      mpc_apply(mpc_tok_parens
+        (mpc_many1(node_fold, mpc_or(3, mpc_tok(note), mpc_tok(interval), mpc_tok(divider))),
+          free_node), apply_legato));
 
     // Label (part of sheet and group): myLabel:
     mpc_define(label, mpc_and(2, mpcf_fst_free, mpc_ident(), mpc_char(':'), free));
 
     mpc_parser_t *duration = mpc_or(4,
-                                    mpc_and(3, duration_fold, mpc_digits(), mpc_string("is"), mpc_digits(), free, free),
-                                    mpc_and(3, duration_fold, mpc_digits(), mpc_string("as"), mpc_digits(), free, free),
-                                    mpc_and(3, duration_fold, mpc_digits(), mpc_string("to"), mpc_digits(), free, free),
-                                    mpc_apply(mpc_digits(), apply_as_duration)
-      );
+      mpc_and(3, duration_fold, mpc_digits(), mpc_string("is"), mpc_digits(), free, free),
+      mpc_and(3, duration_fold, mpc_digits(), mpc_string("as"), mpc_digits(), free, free),
+      mpc_and(3, duration_fold, mpc_digits(), mpc_string("to"), mpc_digits(), free, free),
+      mpc_apply(mpc_digits(), apply_as_duration));
 
     // Repeater (part of reference and sheet): {}x2
     mpc_define(repeater, mpc_maybe_lift(mpc_or(2,
-                                               mpc_and(2, repeater_fold,
-                                                       mpc_char('x'),
-                                                       mpc_digits(),
-                                                       free), mpc_apply(mpc_string("loop"), apply_loop)), ctor_one));
+          mpc_and(2, repeater_fold,
+            mpc_char('x'), mpc_digits(), free), mpc_apply(mpc_string("loop"), apply_loop)), ctor_one));
 
     // Sheet: label:4to3{...}
     mpc_define(sheet, mpc_and(4, sheet_fold,
-                              mpc_maybe_lift(label, mpcf_ctor_str),
-                              duration,
-                              mpc_tok_brackets(mpc_many(node_fold, mpc_or(10,
-                                                                          mpc_tok(rest),
-                                                                          mpc_tok(interval),
-                                                                          mpc_tok(tie),
-                                                                          mpc_tok(divider),
-                                                                          mpc_tok(comment),
-                                                                          mpc_tok(legato),
-                                                                          mpc_tok(sheet),
-                                                                          mpc_tok(controller),
-                                                                          mpc_tok(program), mpc_tok(note)
-                                                        )), free_node), repeater, free, free, free_node));
+        mpc_maybe_lift(label, mpcf_ctor_str),
+        duration,
+        mpc_tok_brackets(mpc_many(node_fold, mpc_or(10,
+              mpc_tok(rest),
+              mpc_tok(interval),
+              mpc_tok(tie),
+              mpc_tok(divider),
+              mpc_tok(comment), mpc_tok(legato), mpc_tok(sheet), mpc_tok(controller), mpc_tok(program), mpc_tok(note)
+            )), free_node), repeater, free, free, free_node));
 
     // Top level statements
     mpc_parser_t *crate = mpc_total(mpc_many(node_fold, mpc_or(6,
-                                                               mpc_tok(sheet),
-                                                               mpc_tok(reference),
-                                                               mpc_tok(bpm),
-                                                               mpc_tok(controller),
-                                                               mpc_tok(program),
-                                                               mpc_tok(comment)
-                                             )), free_node);
+          mpc_tok(sheet),
+          mpc_tok(reference),
+          mpc_tok(bpm),
+          mpc_tok(controller),
+          mpc_tok(program),
+          mpc_tok(comment)
+        )), free_node);
 
     // Crate and EOF
     mpc_define(parser, mpc_apply(crate, apply_eof));
@@ -169,13 +159,12 @@ void free_parser(struct parser *p) {
         return;
 
     mpc_cleanup(14,
-                p->note,
-                p->interval,
-                p->rest,
-                p->tie,
-                p->divider,
-                p->controller,
-                p->program, p->repeater, p->comment, p->reference, p->label, p->sheet, p->legato, p->root);
+      p->note,
+      p->interval,
+      p->rest,
+      p->tie,
+      p->divider,
+      p->controller, p->program, p->repeater, p->comment, p->reference, p->label, p->sheet, p->legato, p->root);
 
     *p = (struct parser) { 0 };
 }
@@ -538,7 +527,7 @@ void print_ast(struct node *n, FILE * f) {
 
     case NODE_TYPE_NOTE:
         fprintf(f, "(NOTE ch:%d n:%c a:%s o:%d v:%d)", n->u.note->channel, n->u.note->letter, n->u.note->accidental,
-                n->u.note->octave, n->u.note->velocity);
+          n->u.note->octave, n->u.note->velocity);
         break;
 
     case NODE_TYPE_INTERVAL:
@@ -559,7 +548,7 @@ void print_ast(struct node *n, FILE * f) {
 
     case NODE_TYPE_SHEET:
         fprintf(f, "(SHEET l:%s u:%d d:%d r:%d", n->u.sheet->label, n->u.sheet->units, n->u.sheet->duration,
-                n->u.sheet->repeat_count);
+          n->u.sheet->repeat_count);
         for (size_t i = 0; i < n->n; i++) {
             fprintf(f, " ");
             print_ast(n->nodes[i], f);
