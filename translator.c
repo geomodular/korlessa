@@ -567,31 +567,33 @@ void print_event(struct event_list *l, FILE * f) {
         } else if (l->end_loop) {
             loop = "L-END ";
         }
-        fprintf(f, "(NOTE %st:%u ch:%u d:%u n:%u v:%u) ", loop, e.time.tick, n.channel, n.duration, n.note, n.velocity);
+
+        fprintf(f, "(NOTE %st:%u ch:%u d:%u n:%u v:%u)", loop, e.time.tick, n.channel, n.duration, n.note, n.velocity);
         break;
     }
 
     case SND_SEQ_EVENT_CONTROLLER:
-        fprintf(f, "(CC p:%u v:%d) ", e.data.control.param, e.data.control.value);
+        fprintf(f, "(CC p:%u v:%d)", e.data.control.param, e.data.control.value);
         break;
 
     case SND_SEQ_EVENT_PGMCHANGE:
-        fprintf(f, "(PGM v:%d) ", e.data.control.value);
+        fprintf(f, "(PGM v:%d)", e.data.control.value);
         break;
 
     case SND_SEQ_EVENT_TEMPO:
-        fprintf(f, "(TEMPO t:%u bpm:%d) ", e.time.tick, e.data.queue.param.value);
+        fprintf(f, "(TEMPO t:%u bpm:%d)", e.time.tick, e.data.queue.param.value);
         break;
 
     case SND_SEQ_EVENT_USR0:
-        fprintf(f, "(USR0 t:%u) ", e.time.tick);
+        fprintf(f, "(USR0 t:%u)", e.time.tick);
         break;
     }
 }
 
 void print_events(struct event_list *l, FILE * f) {
-    if (l == NULL)
-        return;
     print_event(l, f);
-    print_events(l->l.next, f);
+    if (l->l.next != NULL) {
+        fprintf(f, " ");
+        print_events(l->l.next, f);
+    }
 }

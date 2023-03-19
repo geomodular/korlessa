@@ -38,6 +38,7 @@
 korlessa
 tests/list
 tests/parser
+tests/translator
 
 # Debug files
 *.dSYM/

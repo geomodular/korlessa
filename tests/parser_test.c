@@ -14,7 +14,7 @@ typedef struct test_case tc;
 char *get_ast(struct parse_result *r);
 
 void test_empty(struct test *t) {
-    struct test_case c = {"", "(CRATE (EOF))"};
+    tc c = {"", "(CRATE (EOF))"};
     
     struct parser p = new_parser();
     struct parse_result res = parse("<test>", p, c.source);
