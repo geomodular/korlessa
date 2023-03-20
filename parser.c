@@ -224,7 +224,7 @@ mpc_val_t *interval_fold(int n, mpc_val_t ** xs) {
     node->type = NODE_TYPE_INTERVAL;
     node->u.interval = interval;
 
-    free(xs[0]); // sign/char 
+    free(xs[0]); // sign/char
     free(xs[1]); // digits/chars
 
     return node;
@@ -301,9 +301,10 @@ mpc_val_t *duration_fold(int n, mpc_val_t ** xs) {
 
     char *units = xs[0];
     char *duration = xs[2];
-    char *ret = calloc(strlen(units) + strlen(duration) + 2, sizeof (char));
+    size_t len = strlen(units) + strlen(duration) + 2;
+    char *ret = calloc(len, sizeof (char));
 
-    sprintf(ret, "%s:%s", units, duration);
+    snprintf(ret, len, "%s:%s", units, duration);
 
     free(xs[0]); // units/string
     free(xs[1]); // 'is' | 'as' | 'to' /string
@@ -418,9 +419,10 @@ mpc_val_t *apply_eof(mpc_val_t * x) {
 
 mpc_val_t *apply_as_duration(mpc_val_t * x) {
     char *str = x;
-    char *ret = calloc(strlen(str) + 3, sizeof (char));
+    size_t len = strlen(str) + 3;
+    char *ret = calloc(len, sizeof (char));
 
-    sprintf(ret, "1:%s", str);
+    snprintf(ret, len, "1:%s", str);
     free(x);
     return ret;
 }

@@ -162,7 +162,7 @@ int main(int argc, char **argv) {
         }
         res = parse("<stdin>", p, in);
         free(in);
-    };
+    }
 
     if (res.err != NULL) {
         fprintf(stderr, "%s", res.err);

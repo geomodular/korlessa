@@ -49,7 +49,7 @@ void *list_find(void *list, bool (*f)(void *, void *), void *arg) {
         if (f(l, arg))
             return l;
         l = next;
-    };
+    }
     return NULL;
 }
 
@@ -68,7 +68,7 @@ void list_apply(void *list, void (*f)(void *)) {
 
         f(l);
         l = next;
-    };
+    }
 }
 
 void list_apply_ctx(void *list, void (*f)(void *, void *), void *ctx) {
@@ -79,7 +79,7 @@ void list_apply_ctx(void *list, void (*f)(void *, void *), void *ctx) {
 
         f(l, ctx);
         l = next;
-    };
+    }
 }
 
 void *list_drop_apply(void *list, void (*f)(void *)) {

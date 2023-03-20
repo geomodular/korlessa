@@ -92,8 +92,9 @@ char *get_label(struct namespace *ns) {
     if (elements == 0)
         return NULL;
 
-    // Count dots `.` and `\0` in
+    // Count dots `.` in
     len += elements - 1;
+    // Count `\0` in
     len++;
 
     // Allocate
@@ -101,16 +102,17 @@ char *get_label(struct namespace *ns) {
 
     if (tmp == NULL)
         return NULL;
+
     char *full_label = calloc(len, sizeof (char));
 
     if (full_label == NULL)
         return NULL;
 
     // Build the label up
-    sprintf(full_label, "%s", ns->label);
-    for (struct namespace * n = ns->l.next; n != NULL; n = n->l.next) {
-        sprintf(tmp, "%s.%s", full_label, n->label);
-        strcpy(full_label, tmp);
+    snprintf(full_label, len, "%s", ns->label);
+    for (struct namespace *n = ns->l.next; n != NULL; n = n->l.next) {
+        snprintf(tmp, len, "%s.%s", full_label, n->label);
+        snprintf(full_label, len, "%s", tmp);
     }
 
     free(tmp);
@@ -277,7 +279,7 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
             struct event_list *part = _translate(ctx, n->nodes[i]);
 
             list = list_append(list, part);
-        };
+        }
         return list;
     }
 
@@ -397,7 +399,7 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
             struct event_list *part = _translate(ctx, n->nodes[i]);
 
             list = list_append(list, part);
-        };
+        }
         return list;
     }
 
@@ -411,7 +413,7 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
     case NODE_TYPE_UNKNOWN:
     default:
         break;
-    };
+    }
 
     return NULL;
 }
