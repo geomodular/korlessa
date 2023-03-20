@@ -88,16 +88,14 @@ int drain_events(struct event_list *list, snd_seq_t *client, struct drain_contex
             }
             k++;
             i++;
-            printf("X");
         }
 
         int err = snd_seq_event_output(client, &e);
+
         if (err < 0) {
             fprintf(stderr, "failed outputing event: %s\n", snd_strerror(err));
             return EXIT_FAILURE;
         }
-
-        printf(".");
 
         if (entry->end_loop)
             ctx->offset += entry->loop_offset;
@@ -107,7 +105,6 @@ int drain_events(struct event_list *list, snd_seq_t *client, struct drain_contex
         if (entry == NULL)
             break;
     }
-    printf("\n");
     ctx->current = entry;
     ctx->index = i;
 
