@@ -8,10 +8,8 @@
 #include "scheduler.h"
 
 #define DEFAULT_BPM 120 // TODO: make as an argument
-#define DEFAULT_QUEUE_SIZE 64
-#define DEFAULT_BUFFER_SIZE 64
-#define DEFAULT_DRAIN_SIZE 32
-#define DEFAULT_DRAIN_INTERVAL 32
+#define DEFAULT_QUEUE_SIZE 128
+#define DEFAULT_DRAIN_SIZE 96
 #define DEFAULT_POLL_TIMEOUT 1000 // ms
 
 struct drain_context {
@@ -81,15 +79,7 @@ int drain_events(struct event_list *list, snd_seq_t *client, struct drain_contex
         snd_seq_event_t e = entry->e;
         e.time.tick += ctx->offset;
 
-        int err = snd_seq_event_output(client, &e);
-        if (err < 0) {
-            fprintf(stderr, "failed outputing event: %s\n", snd_strerror(err));
-            return EXIT_FAILURE;
-        }
-
-        printf(".");
-
-        if (i % DEFAULT_DRAIN_INTERVAL == 0 && i != 0) {
+        if (i % DEFAULT_DRAIN_SIZE == (DEFAULT_DRAIN_SIZE - 1)) {
             usr1.time.tick = e.time.tick;
             int err = snd_seq_event_output(client, &usr1);
             if (err < 0) {
@@ -97,9 +87,17 @@ int drain_events(struct event_list *list, snd_seq_t *client, struct drain_contex
                 return EXIT_FAILURE;
             }
             k++;
+            i++;
             printf("X");
         }
-        fflush(stdout);
+
+        int err = snd_seq_event_output(client, &e);
+        if (err < 0) {
+            fprintf(stderr, "failed outputing event: %s\n", snd_strerror(err));
+            return EXIT_FAILURE;
+        }
+
+        printf(".");
 
         if (entry->end_loop)
             ctx->offset += entry->loop_offset;
@@ -151,26 +149,27 @@ int loop(struct event_list *list, snd_seq_t * client, struct drain_context *ctx,
 
             if (revents > 0) {
                 snd_seq_event_t *e;
+                do {
+                    snd_seq_event_input(client, &e);
+                    switch (e->type) {
+                    case SND_SEQ_EVENT_USR0: // Stop the sequencer and program
+                        //printf("got usr0; stopping poll\n");
+                        running = 0;
+                        break;
 
-                snd_seq_event_input(client, &e);
-                switch (e->type) {
-                case SND_SEQ_EVENT_USR0: // Stop the sequencer and program
-                    //printf("got usr0; stopping poll\n");
-                    running = 0;
-                    break;
+                    case SND_SEQ_EVENT_USR1: // Drain another output
+                        //printf("got usr1 draining event\n");
+                        if (drain_events(list, client, ctx, DEFAULT_DRAIN_SIZE, usr1) == EXIT_FAILURE)
+                            goto FAIL_1;
+                        break;
 
-                case SND_SEQ_EVENT_USR1: // Drain another output
-                    //printf("got usr1 draining event\n");
-                    if (drain_events(list, client, ctx, DEFAULT_DRAIN_SIZE, usr1) == EXIT_FAILURE)
-                        goto FAIL_1;
-                    break;
-
-                case SND_SEQ_EVENT_TEMPO: // Change tempo
-                    //printf("got tempo; changing tempo\n");
-                    set_tempo(client, e->data.queue.queue, e->data.queue.param.value);
-                    break;
-                }
-                snd_seq_free_event(e);
+                    case SND_SEQ_EVENT_TEMPO: // Change tempo
+                        //printf("got tempo; changing tempo\n");
+                        set_tempo(client, e->data.queue.queue, e->data.queue.param.value);
+                        break;
+                    }
+                    snd_seq_free_event(e);
+                } while (snd_seq_event_input_pending(client, 0) > 0);
             }
         }
     }
@@ -202,7 +201,7 @@ int run(struct event_list *list, snd_seq_t * client, int queue_id, snd_seq_event
         .offset = 0,
     };
 
-    err = drain_events(list, client, &ctx, DEFAULT_BUFFER_SIZE, usr1);
+    err = drain_events(list, client, &ctx, DEFAULT_QUEUE_SIZE, usr1);
     if (err == EXIT_FAILURE)
         goto FAIL_1;
 
