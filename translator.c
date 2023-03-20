@@ -49,6 +49,21 @@ void free_sheet_reference(void *r) {
     free(ptr);
 }
 
+void free_after_loop(void *event, void *ctx) {
+    struct event_list *e = event;
+    bool *is_loop = ctx;
+
+    if (*is_loop) {
+        free(e);
+        return;
+    }
+
+    if (e->end_loop) {
+        e->l.next = NULL;
+        *is_loop = true;
+    }
+}
+
 struct namespace {
     struct list l;
     const char *label;
@@ -412,6 +427,8 @@ struct event_list *translate(struct node n) {
     struct context ctx = init_context();
     struct event_list *events = _translate(&ctx, &n);
 
+    bool is_loop = false;
+    list_apply_ctx(events, free_after_loop, &is_loop);
     list_apply(ctx.sheets, free_sheet_reference);
     return events;
 }

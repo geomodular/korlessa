@@ -16,10 +16,11 @@ char *get_events(struct parse_result *r);
 
 void test_loop(struct test *t) {
     tc *cases[] = {
-        &(tc) {"8{c}loop", "(NOTE L-START-END t:0 ch:0 d:44 n:60 v:127) (USR0 t:48)"},
-        &(tc) {"8{c d}loop", "(NOTE L-START t:0 ch:0 d:44 n:60 v:127) (NOTE L-END t:48 ch:0 d:44 n:62 v:127) (USR0 t:96)"},
-        &(tc) {"8{c 2{d e}}loop", "(NOTE L-START t:0 ch:0 d:44 n:60 v:127) (NOTE t:48 ch:0 d:20 n:62 v:127) (NOTE L-END t:72 ch:0 d:20 n:64 v:127) (USR0 t:96)"},
-        &(tc) {"8{2{c d} 2{e f}}loop", "(NOTE L-START t:0 ch:0 d:20 n:60 v:127) (NOTE t:24 ch:0 d:20 n:62 v:127) (NOTE t:48 ch:0 d:20 n:64 v:127) (NOTE L-END t:72 ch:0 d:20 n:65 v:127) (USR0 t:96)"},
+        &(tc) {"8{c}loop", "(NOTE L-START-END t:0 ch:0 d:44 n:60 v:127)"},
+        &(tc) {"8{c d}loop", "(NOTE L-START t:0 ch:0 d:44 n:60 v:127) (NOTE L-END t:48 ch:0 d:44 n:62 v:127)"},
+        &(tc) {"8{c 2{d e}}loop", "(NOTE L-START t:0 ch:0 d:44 n:60 v:127) (NOTE t:48 ch:0 d:20 n:62 v:127) (NOTE L-END t:72 ch:0 d:20 n:64 v:127)"},
+        &(tc) {"8{2{c d} 2{e f}}loop", "(NOTE L-START t:0 ch:0 d:20 n:60 v:127) (NOTE t:24 ch:0 d:20 n:62 v:127) (NOTE t:48 ch:0 d:20 n:64 v:127) (NOTE L-END t:72 ch:0 d:20 n:65 v:127)"},
+        &(tc) {"8{c}loop 4{d}", "(NOTE L-START-END t:0 ch:0 d:44 n:60 v:127)"},
         NULL,
     };
 
