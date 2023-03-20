@@ -35,7 +35,7 @@ void test_loop(struct test *t) {
 
         free(actual);
         free_parse_result(&res);
-    };
+    }
 
     free_parser(&p);
 }
@@ -59,7 +59,7 @@ char *get_events(struct parse_result *r) {
     struct event_list *list = translate(*r->n);
 
     FILE* f = open_memstream(&buffer, &size);
-    print_events(list, f); 
+    print_events(list, f);
     fclose(f);
 
     list_apply(list, free);

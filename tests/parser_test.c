@@ -15,7 +15,7 @@ char *get_ast(struct parse_result *r);
 
 void test_empty(struct test *t) {
     tc c = {"", "(CRATE (EOF))"};
-    
+
     struct parser p = new_parser();
     struct parse_result res = parse("<test>", p, c.source);
 
@@ -44,7 +44,7 @@ void test_comment(struct test *t) {
             failf(t, "  source: %s\n    expected: %s\n         got: %s", cases[i]->source, cases[i]->expected, actual);
         free(actual);
         free_parse_result(&res);
-    };
+    }
 
     free_parser(&p);
 }
@@ -68,7 +68,7 @@ void test_crate(struct test *t) {
             failf(t, "  source: %s\n    expected: %s\n         got: %s", cases[i]->source, cases[i]->expected, actual);
         free(actual);
         free_parse_result(&res);
-    };
+    }
 
     free_parser(&p);
 }
@@ -97,7 +97,7 @@ void test_sheet(struct test *t) {
             failf(t, "  source: %s\n    expected: %s\n         got: %s", cases[i]->source, cases[i]->expected, actual);
         free(actual);
         free_parse_result(&res);
-    };
+    }
 
     free_parser(&p);
 }
@@ -121,7 +121,7 @@ void test_note(struct test *t) {
             failf(t, "  source: %s\n    expected: %s\n         got: %s", cases[i]->source, cases[i]->expected, actual);
         free(actual);
         free_parse_result(&res);
-    };
+    }
 
     free_parser(&p);
 }
