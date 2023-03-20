@@ -32,6 +32,10 @@ int list_size(void *list);
 // It's safe to use `free()` to destroy the whole list.
 void list_apply(void *list, void (*f)(void *));
 
+// list_apply_ctx traverses over the `list` and runs function `f` on each element.
+// Context `ctx` is passed to every cycle as second argument of `f`.
+void list_apply_ctx(void *list, void (*f)(void *, void *), void *ctx);
+
 // list_drop_apply drops the last element in the list and applies `f` on it.
 // The expected use is to remove and free the last element. Function returns
 // head of the`list`, or NULL if nothing left.

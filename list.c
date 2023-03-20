@@ -71,6 +71,17 @@ void list_apply(void *list, void (*f)(void *)) {
     };
 }
 
+void list_apply_ctx(void *list, void (*f)(void *, void *), void *ctx) {
+    struct list *l = list;
+
+    while (l != NULL) {
+        struct list *next = l->next;
+
+        f(l, ctx);
+        l = next;
+    };
+}
+
 void *list_drop_apply(void *list, void (*f)(void *)) {
     struct list *l = list;
     struct list *last = NULL;

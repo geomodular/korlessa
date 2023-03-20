@@ -180,6 +180,21 @@ void test_apply(struct test *t) {
     }
 }
 
+void sum_names(void *person, void *ctx) {
+    int *sum = ctx;
+    *sum += 1;
+}
+
+void test_apply_ctx(struct test *t) {
+    Person *ps = get_static_list();
+
+    int sum = 0;
+    list_apply_ctx(ps, sum_names, &sum);
+
+    if (sum != 5)
+        failf(t, "expected sum 5 got %d", sum);
+}
+
 void test_drop_apply(struct test *t) {
     Person *ps = get_static_list();
     Person *last = list_goto_last(ps);
@@ -247,6 +262,7 @@ int main(int argc, char **argv) {
         test_find,
         test_find_phony,
         test_apply,
+        test_apply_ctx,
         test_drop_apply,
         test_drop_apply_null_list,
         test_sort,
