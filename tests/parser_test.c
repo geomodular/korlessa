@@ -85,6 +85,7 @@ void test_sheet(struct test *t) {
         &(tc) {"4{}x1", "(CRATE (SHEET l: u:1 d:4 r:1) (EOF))"},
         &(tc) {"4{}x2", "(CRATE (SHEET l: u:1 d:4 r:2) (EOF))"},
         &(tc) {"4{}loop", "(CRATE (SHEET l: u:1 d:4 r:-1) (EOF))"},
+        &(tc) {"4{}off", "(CRATE (SHEET l: u:1 d:4 r:0) (EOF))"},
         NULL,
     };
 

@@ -22,6 +22,7 @@ mpc_val_t *apply_divider(mpc_val_t * x);
 mpc_val_t *apply_eof(mpc_val_t * x);
 mpc_val_t *apply_as_duration(mpc_val_t * x);
 mpc_val_t *apply_loop(mpc_val_t * x);
+mpc_val_t *apply_off(mpc_val_t * x);
 mpc_val_t *apply_legato(mpc_val_t * x);
 void free_node(mpc_val_t * x);
 
@@ -106,9 +107,13 @@ struct parser new_parser() {
       mpc_apply(mpc_digits(), apply_as_duration));
 
     // Repeater (part of reference and sheet): {}x2
-    mpc_define(repeater, mpc_maybe_lift(mpc_or(2,
-          mpc_and(2, repeater_fold,
-            mpc_char('x'), mpc_digits(), free), mpc_apply(mpc_string("loop"), apply_loop)), ctor_one));
+    mpc_define(repeater, mpc_maybe_lift(mpc_or(3,
+            mpc_and(2, repeater_fold,
+                mpc_char('x'),
+                mpc_digits(), free),
+            mpc_apply(mpc_string("loop"), apply_loop),
+            mpc_apply(mpc_string("off"), apply_off)),
+        ctor_one));
 
     // Sheet: label:4to3{...}
     mpc_define(sheet, mpc_and(4, sheet_fold,
@@ -431,6 +436,12 @@ mpc_val_t *apply_loop(mpc_val_t * x) {
     int *ret = calloc(1, sizeof (int));
 
     *ret = -1;
+    free(x);
+    return ret;
+}
+
+mpc_val_t *apply_off(mpc_val_t * x) {
+    int *ret = calloc(1, sizeof (int));
     free(x);
     return ret;
 }
