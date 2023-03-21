@@ -130,7 +130,8 @@ struct context {
     double divider;
     int velocity;
     struct event_list *last_note;
-    struct event_list *last_interval;
+    struct event_list *prev_tone; // Might be note or interval
+    bool did_rest;
     bool referencing;
     bool legato;
 };
@@ -148,7 +149,8 @@ struct context init_context() {
         .divider = 1.,
         .velocity = 9,
         .last_note = NULL,
-        .last_interval = NULL,
+        .prev_tone = NULL,
+        .did_rest = false,
         .referencing = false,
         .legato = false,
     };
@@ -209,7 +211,8 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
         ctx->octave = note->octave;
         ctx->velocity = note->velocity;
         ctx->last_note = entry;
-        ctx->last_interval = NULL;
+        ctx->prev_tone = entry;
+        ctx->did_rest = false;
         ctx->offset += compute_duration(ctx->divider);
         return entry;
     }
@@ -220,7 +223,8 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
             snd_seq_event_t e = translate_interval(ctx, ctx->last_note->e, n->u.interval);
             struct event_list *entry = new_event_list(e);
 
-            ctx->last_interval = entry;
+            ctx->prev_tone = entry;
+            ctx->did_rest = false;
             ctx->offset += compute_duration(ctx->divider);
             return entry;
         }
@@ -229,8 +233,7 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
     }
 
     case NODE_TYPE_REST:
-        ctx->last_note = NULL;
-        ctx->last_interval = NULL;
+        ctx->did_rest = true;
         ctx->offset += compute_duration(ctx->divider);
         break;
 
@@ -238,13 +241,9 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
     {
         unsigned int d = compute_duration(ctx->divider);
 
-        if (ctx->last_interval != NULL) {
-            ctx->last_interval->e.data.note.duration += d;
-            ctx->offset += d;
-        } else if (ctx->last_note != NULL) {
-            ctx->last_note->e.data.note.duration += d;
-            ctx->offset += d;
-        }
+        if (ctx->prev_tone != NULL && !ctx->did_rest)
+            ctx->prev_tone->e.data.note.duration += d;
+        ctx->offset += d;
         break;
     }
 
@@ -295,6 +294,7 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
         }
         // Loop preparations
         bool loop = false;
+        bool first_to_loop = false;
         int count = n->u.sheet->repeat_count;
 
         // Loop is indicated by negative number of repeat_count
@@ -317,14 +317,18 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
                 struct event_list *part = _translate(ctx, n->nodes[j]);
 
                 // Loop flag for this sheet and first element
-                if (loop && j == 0)
-                    part->start_loop = true;
+                if (loop && !first_to_loop) {
+                    if (part != NULL) {
+                        part->start_loop = true;
+                        first_to_loop = true;
+                    }
+                }
 
                 // Loop flag for this sheet and last element
                 if (loop && j == (n->n - 1)) {
-                    if (ctx->last_note != NULL) {
-                        ctx->last_note->end_loop = true;
-                        ctx->last_note->loop_offset = ctx->offset - old_offset;
+                    if (ctx->prev_tone != NULL) {
+                        ctx->prev_tone->end_loop = true;
+                        ctx->prev_tone->loop_offset = ctx->offset - old_offset;
                     }
                 }
 
@@ -347,6 +351,7 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
 
             // Loop preparations
             bool loop = false;
+            bool first_to_loop = false;
             int count = n->u.reference->repeat_count;
 
             if (count < 0) {
@@ -369,14 +374,18 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
                     struct event_list *part = _translate(ctx, r->node->nodes[j]);
 
                     // Loop flag for this sheet and first element
-                    if (loop && j == 0)
-                        part->start_loop = true;
+                    if (loop && !first_to_loop) {
+                        if (part != NULL) {
+                            part->start_loop = true;
+                            first_to_loop = true;
+                        }
+                    }
 
                     // Loop flag for this sheet and last element/note
                     if (loop && j == (r->node->n - 1)) {
-                        if (ctx->last_note != NULL) {
-                            ctx->last_note->end_loop = true;
-                            ctx->last_note->loop_offset = ctx->offset - old_offset;
+                        if (ctx->prev_tone != NULL) {
+                            ctx->prev_tone->end_loop = true;
+                            ctx->prev_tone->loop_offset = ctx->offset - old_offset;
                         }
                     }
 
