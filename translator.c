@@ -292,8 +292,10 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
 
             ctx->sheets = list_append(ctx->sheets, r);
         }
+
         // Loop preparations
         bool loop = false;
+        bool dry_run = false;
         bool first_to_loop = false;
         int count = n->u.sheet->repeat_count;
 
@@ -301,6 +303,9 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
         if (count < 0) {
             count = 1;
             loop = true;
+        } else if (count == 0) {
+            count = 1;
+            dry_run = true;
         }
 
         unsigned int old_offset = ctx->offset;
@@ -315,6 +320,11 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
 
                 ctx->divider = d * (duration / (double) units);
                 struct event_list *part = _translate(ctx, n->nodes[j]);
+
+                if (dry_run) {
+                    list_apply(part, free);
+                    continue;
+                };
 
                 // Loop flag for this sheet and first element
                 if (loop && !first_to_loop) {
@@ -336,6 +346,8 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
             }
         }
 
+        if (dry_run)
+            ctx->offset = old_offset;
         if (isNotEmpty(n->u.sheet->label) && !ctx->referencing)
             ctx->namespace = list_drop_apply(ctx->namespace, free);
 
@@ -351,12 +363,16 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
 
             // Loop preparations
             bool loop = false;
+            bool dry_run = false;
             bool first_to_loop = false;
             int count = n->u.reference->repeat_count;
 
             if (count < 0) {
                 count = 1;
                 loop = true;
+            } else if (count == 0) {
+                count = 1;
+                dry_run = true;
             }
 
             unsigned int old_offset = ctx->offset;
@@ -372,6 +388,11 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
                     // Reset value on each iteration
                     ctx->divider = r->divider * (r->node->u.sheet->duration / (double) r->node->u.sheet->units);
                     struct event_list *part = _translate(ctx, r->node->nodes[j]);
+
+                    if (dry_run) {
+                        list_apply(part, free);
+                        continue;
+                    };
 
                     // Loop flag for this sheet and first element
                     if (loop && !first_to_loop) {
@@ -393,6 +414,8 @@ struct event_list *_translate(struct context *ctx, struct node *n) {
                 }
             }
 
+            if (dry_run)
+                ctx->offset = old_offset;
             ctx->divider = d;
             ctx->referencing = false;
             return list;

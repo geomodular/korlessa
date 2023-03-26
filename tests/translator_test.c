@@ -45,6 +45,30 @@ void test_loop(struct test *t) {
     free_parser(&p);
 }
 
+void test_off(struct test *t) {
+    tc *cases[] = {
+        &(tc) {"8{c}off", "(USR0 t:0)"},
+        &(tc) {"label:8{c}off {label}", "(NOTE t:0 ch:0 d:44 n:60 v:127) (USR0 t:48)"},
+        &(tc) {"8{c} label:8{c}off {label}", "(NOTE t:0 ch:0 d:44 n:60 v:127) (NOTE t:48 ch:0 d:44 n:60 v:127) (USR0 t:96)"},
+        NULL,
+    };
+
+    struct parser p = new_parser();
+
+    for (size_t i = 0; cases[i] != NULL; i++) {
+        struct parse_result res = parse("<test>", p, cases[i]->source);
+
+        char *actual = get_events(&res);
+        if (strcmp(cases[i]->expected, actual) != 0)
+            failf(t, "  source: %s\n    expected: %s\n         got: %s", cases[i]->source, cases[i]->expected, actual);
+
+        free(actual);
+        free_parse_result(&res);
+    }
+
+    free_parser(&p);
+}
+
 void test_interval_and_tie(struct test *t) {
     tc *cases[] = {
         &(tc) {"8{c +1}", "(NOTE t:0 ch:0 d:44 n:60 v:127) (NOTE t:48 ch:0 d:44 n:61 v:127) (USR0 t:96)"},
@@ -76,6 +100,7 @@ int main(int argc, char **argv) {
 
     static test_fn tests[] = {
         test_loop,
+        test_off,
         test_interval_and_tie,
         NULL,
     };
