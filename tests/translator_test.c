@@ -50,6 +50,8 @@ void test_off(struct test *t) {
         &(tc) {"8{c}off", "(USR0 t:0)"},
         &(tc) {"label:8{c}off {label}", "(NOTE t:0 ch:0 d:44 n:60 v:127) (USR0 t:48)"},
         &(tc) {"8{c} label:8{c}off {label}", "(NOTE t:0 ch:0 d:44 n:60 v:127) (NOTE t:48 ch:0 d:44 n:60 v:127) (USR0 t:96)"},
+        &(tc) {"8{label:1{c}}off {label}", "(NOTE t:0 ch:0 d:44 n:60 v:127) (USR0 t:48)"},
+        &(tc) {"main:8{label:1{c}}off {main.label}", "(NOTE t:0 ch:0 d:44 n:60 v:127) (USR0 t:48)"},
         NULL,
     };
 
