@@ -94,7 +94,7 @@ struct parser new_parser() {
     // Legato: (a +1 c)
     mpc_define(legato,
       mpc_apply(mpc_tok_parens
-        (mpc_many1(node_fold, mpc_or(3, mpc_tok(note), mpc_tok(interval), mpc_tok(divider))),
+        (mpc_many1(node_fold, mpc_or(4, mpc_tok(note), mpc_tok(interval), mpc_tok(tie), mpc_tok(divider))),
           free_node), apply_legato));
 
     // Label (part of sheet and group): myLabel:
